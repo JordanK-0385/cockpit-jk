@@ -1,37 +1,25 @@
 import { memo } from 'react'
-import { AmbientOrbs } from './AmbientOrbs'
-import { Bokeh } from './Bokeh'
-import { Particles } from './Particles'
-import { Grain } from './Grain'
-import { useDocumentVisibility } from '@/lib/hooks/useDocumentVisibility'
-import { useIdleDetection } from '@/lib/hooks/useIdleDetection'
-import { usePerformanceMode } from '@/lib/preferences'
 
+/**
+ * Disabled by default — Level A++ aggressive performance cut.
+ *
+ * All background animations (orbs / bokeh / particles / animated grain)
+ * were costing >40% GPU + >70% CPU on Jordan's M1. They are now off
+ * across the whole app. The original implementation lives in:
+ *   - ./AmbientOrbs.tsx
+ *   - ./Bokeh.tsx
+ *   - ./Particles.tsx
+ *   - ./Grain.tsx
+ *
+ * To re-enable, import them and render inside the fragment below.
+ * The grain dot pattern is now a static body background-image
+ * (see globals.css :: body) — no need to re-import Grain for that.
+ *
+ * Hooks for visibility / idle / perf-mode are intentionally removed
+ * from here: nothing to gate when nothing renders.
+ */
 function AmbientLayerBase() {
-  const visible = useDocumentVisibility()
-  const idle = useIdleDetection(30_000)
-  const perfMode = usePerformanceMode()
-
-  // P2 — Page Visibility: unmount the whole ambient subtree when the tab
-  // is backgrounded. ~30% GPU saved on idle Mac.
-  if (!visible) return null
-
-  // Performance mode: ambient layer is hidden via CSS (html.perf-mode .ambient-layer { display: none })
-  // We could also early-return here, but keeping the element mounted lets the
-  // CSS transition cover the toggle and avoids re-mount cost when toggled rapidly.
-  if (perfMode) return null
-
-  return (
-    <div
-      className={`ambient-layer fixed inset-0 -z-0 pointer-events-none ${idle ? 'paused' : ''}`}
-      data-paused={idle ? 'true' : 'false'}
-    >
-      <AmbientOrbs />
-      <Bokeh />
-      <Particles />
-      <Grain />
-    </div>
-  )
+  return null
 }
 
 export const AmbientLayer = memo(AmbientLayerBase)

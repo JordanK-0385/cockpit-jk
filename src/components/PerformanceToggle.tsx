@@ -74,8 +74,10 @@ export function PerformanceToggle() {
             <div>
               <p className="text-sm font-medium text-cream-50">Mode performance</p>
               <p className="text-xs text-muted-deeper leading-relaxed mt-0.5">
-                Désactive orbes, particules, bokeh et grain.
-                Garde le glass minimal et les pulses critiques.
+                Aujourd'hui aucune différence visible : les animations
+                de fond sont déjà désactivées par défaut pour économiser
+                CPU/GPU. Réservé pour réactiver/désactiver les ambient
+                effects quand ils reviendront dans un prochain sprint.
               </p>
             </div>
             <Switch

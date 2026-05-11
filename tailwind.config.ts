@@ -61,59 +61,29 @@ export default {
         'eyebrow': ['11px', { letterSpacing: '0.08em', lineHeight: '1.2' }],
       },
       backdropBlur: {
-        // Aligned with --glass-blur-card. Buttons, pills, badges, and
-        // inputs use this; surfaces with their own blur token (header,
-        // chat bubbles, input bar) use dedicated classes instead.
-        glass: '12px',
+        // Aligned with --glass-blur-card. Buttons, pills, badges, inputs
+        // use this token; surfaces with their own blur (header, bubbles,
+        // chat input bar) use dedicated `.glass-*` classes.
+        glass: '6px',
       },
       borderRadius: {
         'glass': '18px',
       },
+      // Only the *functional* animations remain: pill-pulse marks live state
+      // indicators (Claude écoute, system status, P0 missions), shimmer drives
+      // the skeleton loaders. Every decorative background animation has been
+      // removed as part of the Level A++ performance pass.
       animation: {
-        'orb-1': 'orb-drift-1 26s ease-in-out infinite',
-        'orb-2': 'orb-drift-2 30s ease-in-out infinite',
-        'orb-3': 'orb-drift-3 22s ease-in-out infinite',
-        'orb-4': 'orb-drift-4 28s ease-in-out infinite',
-        'bokeh-pulse': 'bokeh-pulse 5s ease-in-out infinite',
-        'particle-rise': 'particle-rise 18s linear infinite',
         'pill-pulse': 'pill-pulse 2.4s ease-in-out infinite',
-        'shimmer': 'shimmer 2.6s linear infinite',
+        'shimmer':    'shimmer 2.6s linear infinite',
       },
       keyframes: {
-        'orb-drift-1': {
-          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-          '33%': { transform: 'translate(60px, -40px) scale(1.08)' },
-          '66%': { transform: 'translate(-40px, 60px) scale(0.94)' },
-        },
-        'orb-drift-2': {
-          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-          '50%': { transform: 'translate(-80px, -50px) scale(1.12)' },
-        },
-        'orb-drift-3': {
-          '0%, 100%': { transform: 'translate(0, 0) scale(0.95)' },
-          '40%': { transform: 'translate(50px, 40px) scale(1.05)' },
-          '80%': { transform: 'translate(-30px, -50px) scale(1)' },
-        },
-        'orb-drift-4': {
-          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-          '50%': { transform: 'translate(40px, -60px) scale(1.06)' },
-        },
-        'bokeh-pulse': {
-          '0%, 100%': { opacity: '0.45', transform: 'scale(1)' },
-          '50%': { opacity: '0.85', transform: 'scale(1.25)' },
-        },
-        'particle-rise': {
-          '0%': { transform: 'translateY(0) translateX(0)', opacity: '0' },
-          '10%': { opacity: '0.8' },
-          '90%': { opacity: '0.6' },
-          '100%': { transform: 'translateY(-110vh) translateX(40px)', opacity: '0' },
-        },
         'pill-pulse': {
           '0%, 100%': { opacity: '0.55', transform: 'scale(1)' },
-          '50%': { opacity: '1', transform: 'scale(1.4)' },
+          '50%':      { opacity: '1',    transform: 'scale(1.4)' },
         },
         'shimmer': {
-          '0%': { backgroundPosition: '-200% 0' },
+          '0%':   { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
       },
