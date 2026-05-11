@@ -13,7 +13,7 @@ function ParticlesBase() {
         return (
           <span
             key={i}
-            className="absolute bottom-[-10vh] rounded-full animate-particle-rise"
+            className="particle absolute bottom-[-10vh] rounded-full animate-particle-rise"
             style={{
               left,
               width: size,

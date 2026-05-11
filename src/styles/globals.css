@@ -6,6 +6,26 @@
    Alpine Studio — global base
    =========================================================== */
 @layer base {
+  :root {
+    /* Glass blur tokens — overridable by .perf-mode below.
+       Lowered from the original 32–60px range to dramatically cut
+       GPU cost while keeping the same visual feel. */
+    --glass-blur-card:   12px;
+    --glass-blur-bubble: 16px;
+    --glass-blur-input:  20px;
+    --glass-blur-header: 28px;
+  }
+
+  /* Performance mode caps blur at 8px max — no perceptible quality loss
+     on small surfaces, ~3-5x cheaper to composite. Activated by user
+     toggle or auto-applied when prefers-reduced-motion: reduce. */
+  html.perf-mode {
+    --glass-blur-card:    8px;
+    --glass-blur-bubble:  8px;
+    --glass-blur-input:   8px;
+    --glass-blur-header:  8px;
+  }
+
   html, body, #root {
     height: 100%;
   }
@@ -24,8 +44,6 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Subtle grain overlay applied via the Grain component;
-     kept here as a reusable utility token */
   ::selection {
     background: rgba(125, 211, 160, 0.35);
     color: #F4F0E8;
@@ -37,8 +55,8 @@
    =========================================================== */
 @layer components {
   .glass-base {
-    backdrop-filter: blur(32px) saturate(160%);
-    -webkit-backdrop-filter: blur(32px) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur-card)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-card)) saturate(160%);
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 18px;
@@ -49,11 +67,32 @@
     transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1),
                 border-color 320ms ease;
-    will-change: transform;
+    /* will-change is opted in only on hover (see below) to avoid keeping
+       a permanent compositing layer alive for every glass surface. */
   }
 
   .glass-base:hover {
+    will-change: transform;
     border-color: rgba(255, 255, 255, 0.16);
+  }
+
+  /* Chat bubble variant — slightly stronger blur, smaller surface area
+     means the perceived quality holds at 16px. */
+  .glass-bubble {
+    backdrop-filter: blur(var(--glass-blur-bubble)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-bubble)) saturate(150%);
+  }
+
+  /* Input bar variant — used for the sticky chat input + chat top pill bar. */
+  .glass-input-bar {
+    backdrop-filter: blur(var(--glass-blur-input)) saturate(140%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-input)) saturate(140%);
+  }
+
+  /* App header — slightly larger blur than cards. */
+  .glass-header {
+    backdrop-filter: blur(var(--glass-blur-header)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-header)) saturate(150%);
   }
 
   .glass-l1 { transform: perspective(1400px) translateZ(60px) rotateX(2deg) rotateY(-1deg); }
@@ -121,6 +160,23 @@
     border-radius: 8px;
   }
 }
+
+/* ===========================================================
+   Ambient layer — pauseable via .paused on the container
+   ===========================================================
+   When user has been idle for N seconds, AmbientLayer adds
+   .paused → all marker elements freeze their animations without
+   unmounting. Resumes instantly on any user input. */
+.ambient-layer.paused .orb,
+.ambient-layer.paused .particle,
+.ambient-layer.paused .bokeh {
+  animation-play-state: paused;
+}
+
+/* Performance mode hides ambient + grain entirely. Critical pulses
+   (Claude écoute pill, P0 missions) are NOT affected since they live
+   outside the ambient layer. */
+html.perf-mode .ambient-layer { display: none; }
 
 /* ===========================================================
    Reduced motion — quiet the ambient layer

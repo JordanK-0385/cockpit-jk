@@ -26,7 +26,7 @@ export function ColumnCenter() {
   return (
     <section className="col-scroll relative flex flex-col">
       {/* sticky pill */}
-      <div className="sticky top-0 z-10 px-6 py-4 backdrop-blur-md bg-ink-deepest/30 border-b border-glass-10">
+      <div className="glass-input-bar sticky top-0 z-10 px-6 py-4 bg-ink-deepest/30 border-b border-glass-10">
         <div className="flex items-center justify-between">
           <GlassPill tone="sage" pulse>
             <Sparkles className="h-3.5 w-3.5 text-sage" />
@@ -44,7 +44,7 @@ export function ColumnCenter() {
       </div>
 
       {/* sticky input */}
-      <div className="sticky bottom-0 z-10 px-6 py-4 backdrop-blur-md bg-ink-deepest/30 border-t border-glass-10">
+      <div className="glass-input-bar sticky bottom-0 z-10 px-6 py-4 bg-ink-deepest/30 border-t border-glass-10">
         <form
           onSubmit={(e) => e.preventDefault()}
           className="flex items-center gap-3"
@@ -77,7 +77,7 @@ function MessageRow({ msg }: { msg: Msg }) {
           depth="flat"
           tone="sage"
           hoverable={false}
-          className="px-4 py-3 max-w-2xl border-dashed"
+          className="glass-bubble px-4 py-3 max-w-2xl border-dashed"
         >
           <p className="text-sm text-sage-light">{msg.text}</p>
         </GlassCard>
@@ -92,7 +92,7 @@ function MessageRow({ msg }: { msg: Msg }) {
         tone={isUser ? 'glacier' : 'neutral'}
         hoverable={false}
         className={cn(
-          'px-4 py-3 max-w-2xl',
+          'glass-bubble px-4 py-3 max-w-2xl',
           isUser ? 'bg-glacier/10' : 'bg-glass-7',
         )}
       >

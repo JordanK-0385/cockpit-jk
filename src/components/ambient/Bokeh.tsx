@@ -14,7 +14,7 @@ function BokehBase() {
       {POINTS.map((p, i) => (
         <span
           key={i}
-          className="absolute rounded-full animate-bokeh-pulse"
+          className="bokeh absolute rounded-full animate-bokeh-pulse"
           style={{
             top: p.top,
             left: p.left,

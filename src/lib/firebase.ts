@@ -8,6 +8,7 @@ import {
   type Auth,
   type User,
 } from 'firebase/auth'
+import { getFirestore, type Firestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,8 +21,9 @@ const firebaseConfig = {
 
 let app: FirebaseApp | null = null
 let auth: Auth | null = null
+let db: Firestore | null = null
 
-function ensureApp(): { app: FirebaseApp; auth: Auth } {
+function ensureApp(): { app: FirebaseApp; auth: Auth; db: Firestore } {
   if (!firebaseConfig.apiKey) {
     throw new Error(
       'Firebase config is missing. Did you set VITE_FIREBASE_* in .env.local?',
@@ -30,8 +32,13 @@ function ensureApp(): { app: FirebaseApp; auth: Auth } {
   if (!app) {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
+    db = getFirestore(app)
   }
-  return { app: app!, auth: auth! }
+  return { app: app!, auth: auth!, db: db! }
+}
+
+export function getDb(): Firestore {
+  return ensureApp().db
 }
 
 const provider = new GoogleAuthProvider()

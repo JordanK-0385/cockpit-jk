@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Sparkles, Cloud, LogOut } from 'lucide-react'
 import { GlassPill } from '@/components/ui/GlassPill'
+import { PerformanceToggle } from '@/components/PerformanceToggle'
 import { logout } from '@/lib/firebase'
 import { useAuth } from '@/lib/auth'
 
@@ -24,7 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen w-screen">
-      <header className="sticky top-0 z-30 h-20 w-full px-6 flex items-center justify-between border-b border-glass-10 bg-ink-deepest/40 backdrop-blur-glass">
+      <header className="glass-header sticky top-0 z-30 h-20 w-full px-6 flex items-center justify-between border-b border-glass-10 bg-ink-deepest/40">
         <div className="flex items-center gap-4">
           <div className="relative">
             <div
@@ -50,6 +51,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <GlassPill tone="sage" pulse>
             <span className="text-xs tabular-nums tracking-wider">{timeLabel}</span>
           </GlassPill>
+
+          <PerformanceToggle />
 
           <button
             onClick={() => void logout()}

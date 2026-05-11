@@ -58,7 +58,7 @@ npm run dev
 
 ## Déploiement Vercel
 
-1. Sur **vercel.com → Import Project**, importer `JordanK-0385/JordanK-0385-cockpit-jk`.
+1. Sur **vercel.com → Import Project**, importer `JordanK-0385/cockpit-jk`.
 2. Framework détecté : Vite. Laisser les defaults (`npm run build`, `dist`).
 3. **Environment Variables** : ajouter chaque entrée de `.env.example`. Bien noter que `AIRTABLE_PAT`, `ANTHROPIC_API_KEY`, `N8N_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_JSON` ne doivent **pas** avoir le préfixe `VITE_`.
 4. Deploy. Auto-deploy sur push `main` ensuite.

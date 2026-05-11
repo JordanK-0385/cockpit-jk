@@ -61,7 +61,10 @@ export default {
         'eyebrow': ['11px', { letterSpacing: '0.08em', lineHeight: '1.2' }],
       },
       backdropBlur: {
-        glass: '32px',
+        // Aligned with --glass-blur-card. Buttons, pills, badges, and
+        // inputs use this; surfaces with their own blur token (header,
+        // chat bubbles, input bar) use dedicated classes instead.
+        glass: '12px',
       },
       borderRadius: {
         'glass': '18px',
