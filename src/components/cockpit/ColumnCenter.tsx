@@ -3,6 +3,7 @@ import { Send, Sparkles, AlertCircle } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassPill } from '@/components/ui/GlassPill'
 import { GlassInput } from '@/components/ui/GlassInput'
+import { MarkdownBubble } from '@/components/chat/MarkdownBubble'
 import { cn, logger } from '@/lib/utils'
 import { streamChat, type ChatMessage } from '@/lib/chat'
 
@@ -244,10 +245,16 @@ function MessageRow({ msg }: { msg: Msg }) {
           isUser ? 'bg-glacier/10' : 'bg-glass-7',
         )}
       >
-        <p className="text-sm leading-relaxed text-cream-50 whitespace-pre-wrap">
-          {msg.text}
-          {streaming && <StreamingCursor empty={!msg.text} />}
-        </p>
+        {isUser ? (
+          <p className="text-sm leading-relaxed text-cream-50 whitespace-pre-wrap">
+            {msg.text}
+          </p>
+        ) : (
+          <div className="text-sm text-cream-50">
+            <MarkdownBubble text={msg.text} />
+            {streaming && <StreamingCursor empty={!msg.text} />}
+          </div>
+        )}
       </GlassCard>
     </div>
   )
