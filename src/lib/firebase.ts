@@ -42,10 +42,21 @@ export function getDb(): Firestore {
 }
 
 const provider = new GoogleAuthProvider()
-const calendarScope = import.meta.env.VITE_GOOGLE_CALENDAR_SCOPE
-if (calendarScope) {
-  provider.addScope(calendarScope)
-}
+// Calendar scope intentionally NOT requested at login.
+//
+// When the GoogleAuthProvider includes a non-default OAuth scope, Firebase
+// Auth attaches the resulting access token to the user session and the
+// cross-origin auth iframe (cockpit-jk.firebaseapp.com, running as an OOPIF)
+// starts polling Google's token endpoint to keep that access token fresh —
+// even when no Calendar call is ever made. On Jordan's machine this iframe
+// process was burning ~57% CPU + 41% GPU continuously.
+//
+// Sprint 4 will re-request the Calendar scope on demand via
+// `linkWithPopup(user, calendarProvider)` (or `reauthenticateWithPopup`)
+// right before the first Calendar read/write — that flow only refreshes
+// the access token when the app actually uses it.
+//
+// Scopes left to defaults (email + profile, granted automatically).
 provider.setCustomParameters({ prompt: 'select_account' })
 
 export const AUTHORIZED_EMAIL = import.meta.env.VITE_AUTHORIZED_EMAIL
