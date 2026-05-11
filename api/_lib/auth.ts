@@ -1,6 +1,53 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { initializeApp, cert, getApps, type App } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+
+/**
+ * Local-dev fallback for `vercel dev`.
+ *
+ * Vercel CLI 53.x's `vercel dev` does NOT inject `.env.local` into
+ * serverless function processes when the project is linked to a cloud
+ * project whose environment variables are empty. The functions spawn
+ * with only the parent shell's env, which leaves things like
+ * FIREBASE_SERVICE_ACCOUNT_JSON / ANTHROPIC_API_KEY / AIRTABLE_PAT
+ * undefined and every /api/* route 401s.
+ *
+ * This block reads `.env.local` from cwd once at module load and fills
+ * in any vars missing from process.env. It's a no-op in production
+ * (Vercel injects project env vars directly), and never overwrites an
+ * existing value — so cloud env still wins when populated.
+ *
+ * Remove once Vercel CLI's dev-server is back to honoring `.env.local`
+ * (or once this project's cloud env is populated).
+ */
+function loadLocalEnvFallback(): void {
+  if (process.env.VERCEL_ENV === 'production') return
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) return
+  try {
+    const envPath = path.join(process.cwd(), '.env.local')
+    if (!fs.existsSync(envPath)) return
+    let loaded = 0
+    for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+      if (!line || line.startsWith('#')) continue
+      const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+      if (m && !(m[1] in process.env)) {
+        process.env[m[1]] = m[2]
+        loaded++
+      }
+    }
+    if (loaded > 0) {
+      // eslint-disable-next-line no-console
+      console.log(`[auth] Loaded ${loaded} vars from .env.local (vercel dev fallback)`)
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[auth] Could not load .env.local fallback:', err)
+  }
+}
+
+loadLocalEnvFallback()
 
 let adminApp: App | null = null
 

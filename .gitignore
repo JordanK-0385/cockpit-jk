@@ -8,6 +8,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.local.backup*
 !.env.example
 
 # editor
@@ -34,3 +35,7 @@ lerna-debug.log*
 # Claude Code / preview tooling (local-only configs)
 .claude/launch.json
 .claude/settings.local.json
+
+# Local maintenance scripts not yet checked in.
+# Remove this line when you want to commit a script.
+scripts/compact-firebase-json.mjs
