@@ -41,7 +41,7 @@ export function GlassButton({
     <button
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 border backdrop-blur-glass font-medium',
+        'inline-flex items-center justify-center gap-2 border font-medium',
         'transition-all duration-300 ease-out',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-sage/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-deepest',

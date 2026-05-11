@@ -43,7 +43,7 @@ export function GlassPill({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-glass',
+        'inline-flex items-center gap-2 px-3 py-1.5 rounded-full',
         'bg-glass-7 border text-sm text-cream-50',
         t.border,
         t.glow,

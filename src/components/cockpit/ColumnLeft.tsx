@@ -43,7 +43,7 @@ export function ColumnLeft() {
         <SectionHeader icon={<Eye className="h-3.5 w-3.5" />} label="Veille active" />
         <div className="space-y-3 mt-3">
           {VEILLE_PLACEHOLDERS.map((v, i) => (
-            <GlassCard key={i} depth="l3" tone={v.tone} className="p-3.5">
+            <GlassCard key={i} depth="l3" tone={v.tone} surface="flat" className="p-3.5">
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <GlassBadge tone={v.tone}>{v.source}</GlassBadge>
                 <span className="text-eyebrow text-muted-deeper">{v.score}</span>
@@ -64,7 +64,7 @@ export function ColumnLeft() {
       <section>
         <SectionHeader icon={<Calendar className="h-3.5 w-3.5" />} label="Calendrier" />
         <div className="mt-3 space-y-2">
-          <GlassCard depth="l3" tone="neutral" className="p-3.5" hoverable={false}>
+          <GlassCard depth="l3" tone="neutral" surface="flat" className="p-3.5" hoverable={false}>
             <p className="text-xs text-muted">
               Google Calendar sera branché en Sprint 4.
             </p>
@@ -83,7 +83,7 @@ export function ColumnLeft() {
             </>
           )}
           {sessions.error && (
-            <GlassCard depth="l3" tone="terracotta" className="p-3" hoverable={false}>
+            <GlassCard depth="l3" tone="terracotta" surface="flat" className="p-3" hoverable={false}>
               <p className="text-xs text-terracotta-light">
                 Impossible de charger les sessions Airtable.
               </p>
@@ -96,7 +96,7 @@ export function ColumnLeft() {
             const dateStr = s.fields['Date']
             const date = dateStr ? parseISO(dateStr) : null
             return (
-              <GlassCard key={s.id} depth="l3" tone="neutral" className="p-3">
+              <GlassCard key={s.id} depth="l3" tone="neutral" surface="flat" className="p-3">
                 <div className="flex items-center justify-between mb-1">
                   <GlassBadge>{s.fields['Type'] ?? 'Session'}</GlassBadge>
                   {date && (

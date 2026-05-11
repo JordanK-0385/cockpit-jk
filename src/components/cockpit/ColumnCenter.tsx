@@ -89,10 +89,13 @@ function MessageRow({ msg }: { msg: Msg }) {
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <GlassCard
         depth="flat"
+        surface={isUser ? 'flat' : 'glass'}
         tone={isUser ? 'glacier' : 'neutral'}
         hoverable={false}
         className={cn(
-          'glass-bubble px-4 py-3 max-w-2xl',
+          'px-4 py-3 max-w-2xl',
+          // Claude bubbles keep the slightly stronger blur. User bubbles are flat.
+          !isUser && 'glass-bubble',
           isUser ? 'bg-glacier/10' : 'bg-glass-7',
         )}
       >

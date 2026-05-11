@@ -9,7 +9,7 @@ export const GlassInput = forwardRef<HTMLInputElement, Props>(
       <input
         ref={ref}
         className={cn(
-          'w-full px-4 py-3 rounded-xl backdrop-blur-glass',
+          'w-full px-4 py-3 rounded-xl',
           'bg-glass-7 border border-glass-10',
           'text-cream-50 placeholder:text-muted-deeper',
           'focus:outline-none focus:border-sage/40 focus:bg-glass-10',

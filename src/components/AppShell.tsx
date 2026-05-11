@@ -1,27 +1,19 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Sparkles, Cloud, LogOut } from 'lucide-react'
 import { GlassPill } from '@/components/ui/GlassPill'
+import { LiveClock } from '@/components/LiveClock'
 import { PerformanceToggle } from '@/components/PerformanceToggle'
 import { logout } from '@/lib/firebase'
 import { useAuth } from '@/lib/auth'
 
-function useNow(intervalMs = 1000) {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), intervalMs)
-    return () => window.clearInterval(id)
-  }, [intervalMs])
-  return now
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
-  const now = useNow(1000)
+  // Date label is computed once per mount — it doesn't tick. Crossing
+  // midnight without a reload will keep yesterday's label, which is an
+  // acceptable trade for not re-rendering the entire app every second.
+  const dateLabel = format(new Date(), "EEEE d MMMM", { locale: fr })
   const { user } = useAuth()
-
-  const dateLabel = format(now, "EEEE d MMMM", { locale: fr })
-  const timeLabel = format(now, 'HH:mm:ss')
 
   return (
     <div className="min-h-screen w-screen">
@@ -49,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </GlassPill>
 
           <GlassPill tone="sage" pulse>
-            <span className="text-xs tabular-nums tracking-wider">{timeLabel}</span>
+            <LiveClock />
           </GlassPill>
 
           <PerformanceToggle />

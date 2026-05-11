@@ -19,7 +19,7 @@ export function GlassBadge({ tone = 'neutral', className, children, ...rest }: P
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full border backdrop-blur-glass tracking-wide',
+        'inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full border tracking-wide',
         toneClasses[tone],
         className,
       )}

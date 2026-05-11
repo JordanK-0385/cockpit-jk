@@ -46,7 +46,7 @@ export function PerformanceToggle() {
             : 'Mode performance'
         }
         className={cn(
-          'h-9 w-9 rounded-full border border-glass-10 backdrop-blur-glass',
+          'h-9 w-9 rounded-full border border-glass-10',
           'flex items-center justify-center transition-colors',
           effectivePerformanceMode
             ? 'bg-sage/20 text-sage-light border-sage/40'
@@ -74,10 +74,10 @@ export function PerformanceToggle() {
             <div>
               <p className="text-sm font-medium text-cream-50">Mode performance</p>
               <p className="text-xs text-muted-deeper leading-relaxed mt-0.5">
-                Aujourd'hui aucune différence visible : les animations
-                de fond sont déjà désactivées par défaut pour économiser
-                CPU/GPU. Réservé pour réactiver/désactiver les ambient
-                effects quand ils reviendront dans un prochain sprint.
+                Réservé pour réactivation future. Les animations
+                de fond sont déjà désactivées par défaut pour
+                économiser CPU/GPU — ce toggle servira quand des
+                effets ambient reviendront dans un prochain sprint.
               </p>
             </div>
             <Switch

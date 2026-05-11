@@ -4,25 +4,22 @@
 
 /* ===========================================================
    Alpine Studio — global base
-   Level A++ : no decorative background animations,
-   no 3D transforms, no compositing layers per card.
+   Audit fix : compositor surfaces reduced to structural elements only.
    =========================================================== */
 @layer base {
   :root {
-    /* Glass blur tokens — Level A++ minimums.
-       Everything stays static; we lean on blur + saturation + the
-       sage/glacier accents to suggest depth instead of GPU-heavy
-       3D transforms and animations. */
+    /* Glass blur tokens — kept at Level A++ minimums. Only the few
+       structural surfaces (header, sticky chat bars, focus card,
+       Claude bubbles) actually consume these — leaf cards use the
+       cheaper .glass-flat class with zero backdrop-filter. */
     --glass-blur-card:   6px;
     --glass-blur-bubble: 10px;
     --glass-blur-input:  12px;
     --glass-blur-header: 16px;
   }
 
-  /* The .perf-mode class is still set when the user toggles or the OS
-     prefers reduced motion, but the baseline is already at minimum:
-     no extra CSS overrides are wired right now. Kept for future sprints
-     that may reintroduce ambient effects with a real perf toggle. */
+  /* .perf-mode is still toggled by PreferencesProvider; reserved for a
+     future re-introduction of ambient effects behind a switch. */
 
   html, body, #root {
     height: 100%;
@@ -30,9 +27,8 @@
 
   body {
     @apply font-sans text-cream-50 antialiased;
-    /* Static grain on top of the Alpine Studio gradient. Both layers
-       are background-images on <body> — no extra DOM, no animation,
-       no mix-blend-mode. This replaces the old animated <Grain /> overlay. */
+    /* Static grain on top of the Alpine Studio gradient — both layers
+       are background-images on <body>. No animation, no mix-blend-mode. */
     background-image:
       radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
       linear-gradient(160deg,
@@ -54,61 +50,72 @@
 }
 
 /* ===========================================================
-   Glass surfaces — flat (2D only)
+   Glass surfaces
+   - .glass-base : structural surface with backdrop-filter
+   - .glass-flat : leaf surface — same look at a glance, ZERO
+                   compositor cost (no backdrop-filter, no saturate)
+   No saturate() anywhere — audit confirmed it doubles GPU shader cost
+   for imperceptible visual gain.
    =========================================================== */
 @layer components {
-  .glass-base {
-    backdrop-filter: blur(var(--glass-blur-card)) saturate(160%);
-    -webkit-backdrop-filter: blur(var(--glass-blur-card)) saturate(160%);
+  .glass-base,
+  .glass-flat {
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 18px;
-    /* Stronger box-shadow compensates for the loss of 3D translateZ —
-       depth is suggested visually, not computed by the compositor. */
+    /* Box-shadow blur radii reduced from 48/64px → 16/24px. Same
+       suggestion of depth, ~3-4× cheaper to composite. */
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.10),
       inset 0 -1px 0 rgba(0, 0, 0, 0.20),
-      0 24px 48px -20px rgba(0, 0, 0, 0.50);
+      0 8px 16px -8px rgba(0, 0, 0, 0.45);
     transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1),
                 border-color 300ms ease;
-    /* will-change is only opted in on :hover to avoid keeping a
-       permanent compositing layer alive per glass surface. */
   }
 
-  .glass-base:hover {
+  /* Structural surfaces keep the backdrop blur. */
+  .glass-base {
+    backdrop-filter: blur(var(--glass-blur-card));
+    -webkit-backdrop-filter: blur(var(--glass-blur-card));
+  }
+
+  /* will-change is only opted in on :hover to avoid keeping a
+     permanent compositing layer alive per surface. */
+  .glass-base:hover,
+  .glass-flat:hover {
     will-change: transform;
     border-color: rgba(255, 255, 255, 0.16);
   }
 
-  /* Chat bubble variant — small surface, slightly stronger blur. */
+  /* Chat bubble variant — small surface, slightly stronger blur,
+     applied on top of .glass-base for Claude messages (structural). */
   .glass-bubble {
-    backdrop-filter: blur(var(--glass-blur-bubble)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--glass-blur-bubble)) saturate(150%);
+    backdrop-filter: blur(var(--glass-blur-bubble));
+    -webkit-backdrop-filter: blur(var(--glass-blur-bubble));
   }
 
   /* Sticky chat input bar + top pill bar. */
   .glass-input-bar {
-    backdrop-filter: blur(var(--glass-blur-input)) saturate(140%);
-    -webkit-backdrop-filter: blur(var(--glass-blur-input)) saturate(140%);
+    backdrop-filter: blur(var(--glass-blur-input));
+    -webkit-backdrop-filter: blur(var(--glass-blur-input));
   }
 
   /* App header. */
   .glass-header {
-    backdrop-filter: blur(var(--glass-blur-header)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--glass-blur-header)) saturate(150%);
+    backdrop-filter: blur(var(--glass-blur-header));
+    -webkit-backdrop-filter: blur(var(--glass-blur-header));
   }
 
-  /* Depth markers are now no-ops — kept as classes so existing
-     `<GlassCard depth="l1|l2|l3">` call sites keep compiling. Future
-     work may reintroduce subtle parallax behind a perf flag. */
+  /* Depth markers are no-ops on transform — kept as classes so existing
+     `<GlassCard depth="l1|l2|l3">` call sites keep compiling. */
   .glass-l1,
   .glass-l2,
   .glass-l3 {
     transform: none;
   }
 
-  /* Hover lift — 2D only, no perspective, no rotate, no translateZ. */
+  /* Hover lift — 2D only, applies to both glass and flat surfaces. */
   .glass-l1:hover,
   .glass-l2:hover,
   .glass-l3:hover {
@@ -116,7 +123,7 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.14),
       inset 0 -1px 0 rgba(0, 0, 0, 0.24),
-      0 32px 64px -20px rgba(0, 0, 0, 0.60);
+      0 12px 24px -8px rgba(0, 0, 0, 0.50);
   }
 
   /* Top light bar — kept, static gradient, no animation. */
@@ -157,7 +164,7 @@
     background: rgba(125, 211, 160, 0.50);
   }
 
-  /* Shimmer skeleton (sage tint) — kept, it's a critical loading indicator. */
+  /* Shimmer skeleton (sage tint) — kept, critical loading indicator. */
   .skeleton {
     background: linear-gradient(
       90deg,

@@ -26,7 +26,7 @@ export function ColumnRight() {
               </p>
             </GlassCard>
           ) : (
-            <GlassCard depth="l3" tone="terracotta" className="p-4" hoverable={false}>
+            <GlassCard depth="l3" tone="terracotta" surface="flat" className="p-4" hoverable={false}>
               <p className="text-xs text-terracotta-light leading-relaxed">
                 Pas de focus défini. Lance un Check-in (Sprint 4) pour le poser.
               </p>
@@ -46,7 +46,7 @@ export function ColumnRight() {
             </>
           )}
           {projects.error && (
-            <GlassCard depth="l3" tone="terracotta" className="p-3" hoverable={false}>
+            <GlassCard depth="l3" tone="terracotta" surface="flat" className="p-3" hoverable={false}>
               <p className="text-xs text-terracotta-light">
                 Impossible de charger les projets Airtable.
               </p>
@@ -61,7 +61,7 @@ export function ColumnRight() {
               ? Math.round((f['% Avancement'] as number) * 100)
               : null
             return (
-              <GlassCard key={p.id} depth="l3" tone="sage" className="p-3.5">
+              <GlassCard key={p.id} depth="l3" tone="sage" surface="flat" className="p-3.5">
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <h4 className="text-sm font-medium text-cream-50 leading-snug">
                     {f['Nom du projet']}
@@ -119,6 +119,7 @@ export function ColumnRight() {
                 key={t.id}
                 depth="l3"
                 tone={tone}
+                surface="flat"
                 className={cn('p-3', isBlocker && 'border-terracotta/40')}
               >
                 <div className="flex items-start gap-2">
