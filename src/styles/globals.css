@@ -14,8 +14,8 @@
        cheaper .glass-flat class with zero backdrop-filter. */
     --glass-blur-card:   6px;
     --glass-blur-bubble: 10px;
-    --glass-blur-input:  12px;
-    --glass-blur-header: 16px;
+    --glass-blur-input:  8px;
+    --glass-blur-header: 8px;
   }
 
   /* .perf-mode is still toggled by PreferencesProvider; reserved for a

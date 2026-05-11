@@ -19,14 +19,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen w-screen">
       <header className="glass-header sticky top-0 z-30 h-20 w-full px-6 flex items-center justify-between border-b border-glass-10 bg-ink-deepest/40">
         <div className="flex items-center gap-4">
-          <div className="relative">
-            <div
-              className="absolute inset-0 rounded-xl blur-lg"
-              style={{ background: 'rgba(125,211,160,0.5)' }}
-            />
-            <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-sage-light to-sage-deep flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-ink-deepest" strokeWidth={2.2} />
-            </div>
+          {/* Sparkle logo — static box-shadow replaces the previous
+              filter:blur halo (filter:blur is a separate compositor
+              layer that runs every paint frame). The shadow is purely
+              painted, no GPU shader. */}
+          <div
+            className="h-10 w-10 rounded-xl bg-gradient-to-br from-sage-light to-sage-deep flex items-center justify-center"
+            style={{ boxShadow: '0 0 22px rgba(125, 211, 160, 0.45)' }}
+          >
+            <Sparkles className="h-5 w-5 text-ink-deepest" strokeWidth={2.2} />
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-sm text-muted">Cockpit · Jordan Koskas</span>
@@ -40,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="text-xs">Paris · 18°</span>
           </GlassPill>
 
-          <GlassPill tone="sage" pulse>
+          <GlassPill tone="sage">
             <LiveClock />
           </GlassPill>
 

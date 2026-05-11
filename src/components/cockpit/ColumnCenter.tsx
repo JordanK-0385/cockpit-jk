@@ -249,12 +249,11 @@ function MessageRowBase({ msg }: MessageRowProps) {
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <GlassCard
         depth="flat"
-        surface={isUser ? 'flat' : 'glass'}
+        surface="flat"
         tone={isUser ? 'glacier' : 'neutral'}
         hoverable={false}
         className={cn(
           'px-4 py-3 max-w-2xl',
-          !isUser && 'glass-bubble',
           isUser ? 'bg-glacier/10' : 'bg-glass-7',
         )}
       >

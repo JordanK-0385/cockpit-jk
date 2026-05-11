@@ -32,14 +32,14 @@ export function Login() {
         className="w-full max-w-md p-10"
       >
         <div className="flex flex-col items-center gap-6 text-center">
-          <div className="relative">
-            <div
-              className="absolute inset-0 rounded-2xl blur-2xl"
-              style={{ background: 'rgba(125,211,160,0.4)' }}
-            />
-            <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-sage-light to-sage-deep flex items-center justify-center">
-              <Sparkles className="h-7 w-7 text-ink-deepest" strokeWidth={2} />
-            </div>
+          {/* Sparkle logo — static box-shadow replaces the previous
+              filter:blur(40px) halo (filter:blur is a separate
+              compositor layer that runs every paint frame). */}
+          <div
+            className="h-14 w-14 rounded-2xl bg-gradient-to-br from-sage-light to-sage-deep flex items-center justify-center"
+            style={{ boxShadow: '0 0 30px rgba(125, 211, 160, 0.4)' }}
+          >
+            <Sparkles className="h-7 w-7 text-ink-deepest" strokeWidth={2} />
           </div>
 
           <div className="flex flex-col gap-1.5">
