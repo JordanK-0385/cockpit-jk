@@ -49,7 +49,7 @@ export function Login() {
             </p>
           </div>
 
-          <GlassPill tone="sage" pulse>
+          <GlassPill tone="sage">
             <span className="text-xs">Accès restreint</span>
           </GlassPill>
 
