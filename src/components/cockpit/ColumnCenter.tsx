@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { memo, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Send, Sparkles, AlertCircle } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassPill } from '@/components/ui/GlassPill'
@@ -215,7 +215,20 @@ export function ColumnCenter() {
   )
 }
 
-function MessageRow({ msg }: { msg: Msg }) {
+/**
+ * MessageRow is memo'd with a content-length comparison so that, while
+ * one bubble is streaming and its text grows by a token each frame,
+ * the OTHER bubbles in the list don't reconcile.
+ *
+ * During streaming a Claude bubble renders as a plain <pre> (no markdown
+ * parse). Once the stream closes (streaming flag flips false) we swap
+ * to <MarkdownBubble>. This skips ~60 react-markdown + react-syntax-
+ * highlighter passes per second on long answers — the dominant cost
+ * during streaming.
+ */
+type MessageRowProps = { msg: Msg }
+
+function MessageRowBase({ msg }: MessageRowProps) {
   if (msg.role === 'suggestion') {
     return (
       <div className="flex justify-center">
@@ -231,7 +244,7 @@ function MessageRow({ msg }: { msg: Msg }) {
     )
   }
   const isUser = msg.role === 'user'
-  const streaming = msg.role === 'claude' && msg.streaming
+  const streaming = msg.role === 'claude' && msg.streaming === true
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <GlassCard
@@ -249,16 +262,45 @@ function MessageRow({ msg }: { msg: Msg }) {
           <p className="text-sm leading-relaxed text-cream-50 whitespace-pre-wrap">
             {msg.text}
           </p>
+        ) : streaming ? (
+          // Streaming: cheap raw text. font-sans overrides <pre>'s default
+          // monospace so the visual matches the markdown render that
+          // replaces it once the stream closes.
+          <div className="text-sm text-cream-50">
+            <pre className="font-sans leading-relaxed whitespace-pre-wrap m-0">
+              {msg.text}
+            </pre>
+            <StreamingCursor empty={!msg.text} />
+          </div>
         ) : (
           <div className="text-sm text-cream-50">
             <MarkdownBubble text={msg.text} />
-            {streaming && <StreamingCursor empty={!msg.text} />}
           </div>
         )}
       </GlassCard>
     </div>
   )
 }
+
+const MessageRow = memo(MessageRowBase, (prev, next) => {
+  // memo: return TRUE when props are equal (skip render).
+  const a = prev.msg
+  const b = next.msg
+  if (a.id !== b.id) return false
+  if (a.role !== b.role) return false
+  // Length-only comparison for text — streaming deltas always grow, so
+  // this is a cheap O(1) proxy for "content changed". Saves the
+  // string-compare cost on every token for already-finalized bubbles.
+  const aText = 'text' in a ? a.text : ''
+  const bText = 'text' in b ? b.text : ''
+  if (aText.length !== bText.length) return false
+  // Streaming flag is what triggers the <pre> → <MarkdownBubble> swap.
+  // Must invalidate the memo when it flips, even if length is unchanged.
+  const aStreaming = a.role === 'claude' && a.streaming === true
+  const bStreaming = b.role === 'claude' && b.streaming === true
+  if (aStreaming !== bStreaming) return false
+  return true
+})
 
 function StreamingCursor({ empty }: { empty?: boolean }) {
   return (
