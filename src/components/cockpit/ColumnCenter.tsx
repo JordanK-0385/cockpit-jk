@@ -1,4 +1,13 @@
-import { memo, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type UIEvent,
+} from 'react'
 import { Send, Sparkles, AlertCircle } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassPill } from '@/components/ui/GlassPill'
@@ -62,18 +71,47 @@ export function ColumnCenter() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const scrollerRef = useRef<HTMLElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // RAF-coalesced auto-scroll. Without this, a streaming Claude response
+  // fires `el.scrollTop = el.scrollHeight` on every token (~60×/sec),
+  // and reading scrollHeight forces a synchronous layout — that was the
+  // dominant cause of the mouse-lag during streams. Now we batch into
+  // at most one scroll per animation frame.
+  const rafIdRef = useRef<number | null>(null)
+  // Sticky-to-bottom: only follow the stream while the user is already
+  // near the bottom. If they scrolled up to re-read, we leave them
+  // alone and skip the layout work entirely.
+  const isNearBottomRef = useRef(true)
 
   useEffect(() => {
-    // Auto-scroll on new content.
+    if (!isNearBottomRef.current) return
     const el = scrollerRef.current
     if (!el) return
-    el.scrollTop = el.scrollHeight
+    if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current)
+    rafIdRef.current = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight
+      rafIdRef.current = null
+    })
   }, [messages])
 
-  useEffect(() => () => abortRef.current?.abort(), [])
+  // Cancel any in-flight RAF + the stream itself on unmount.
+  useEffect(
+    () => () => {
+      abortRef.current?.abort()
+      if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current)
+    },
+    [],
+  )
+
+  const handleScroll = useCallback((e: UIEvent<HTMLElement>) => {
+    const el = e.currentTarget
+    // 100px threshold: small "follow zone" at the bottom. Anywhere
+    // higher = user is reading, we stop following.
+    isNearBottomRef.current =
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 100
+  }, [])
 
   async function handleSubmit(e?: FormEvent) {
     e?.preventDefault()
@@ -89,6 +127,9 @@ export function ColumnCenter() {
 
     const conversationForApi = buildApiMessages(messages, text)
 
+    // Submitting always re-locks the view to the bottom, even if the
+    // user was scrolled up reading older content.
+    isNearBottomRef.current = true
     setMessages((prev) => [...prev, userMsg, claudeMsg])
 
     abortRef.current?.abort()
@@ -155,7 +196,11 @@ export function ColumnCenter() {
   }
 
   return (
-    <section className="col-scroll relative flex flex-col" ref={scrollerRef}>
+    <section
+      className="col-scroll relative flex flex-col"
+      ref={scrollerRef}
+      onScroll={handleScroll}
+    >
       {/* sticky pill */}
       <div className="glass-input-bar sticky top-0 z-10 px-6 py-4 bg-ink-deepest/30 border-b border-glass-10">
         <div className="flex items-center justify-between">
