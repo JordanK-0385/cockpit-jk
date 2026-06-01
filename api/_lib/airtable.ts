@@ -20,7 +20,7 @@ export type AirtableQuery = {
   fields?: string[]
 }
 
-function buildQuery(q: AirtableQuery): string {
+export function buildQuery(q: AirtableQuery): string {
   const params = new URLSearchParams()
   if (q.filterByFormula) params.set('filterByFormula', q.filterByFormula)
   if (q.maxRecords) params.set('maxRecords', String(q.maxRecords))
