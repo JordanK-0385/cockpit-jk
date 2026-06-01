@@ -14,15 +14,8 @@ import { GlassPill } from '@/components/ui/GlassPill'
 import { GlassInput } from '@/components/ui/GlassInput'
 import { MarkdownBubble } from '@/components/chat/MarkdownBubble'
 import { cn, logger } from '@/lib/utils'
-import { streamChat, type ChatMessage } from '@/lib/chat'
-
-type Msg =
-  // `synthetic` flags UI-only messages (greeting, error placeholders…)
-  // that must NEVER be sent to the Anthropic API — they don't exist as
-  // far as the conversation history is concerned.
-  | { id: string; role: 'claude'; text: string; streaming?: boolean; synthetic?: boolean }
-  | { id: string; role: 'user'; text: string }
-  | { id: string; role: 'suggestion'; text: string }
+import { streamChat } from '@/lib/chat'
+import { buildApiMessages, type Msg } from '@/lib/chat-messages'
 
 const INITIAL_MESSAGES: Msg[] = [
   {
@@ -36,34 +29,6 @@ const INITIAL_MESSAGES: Msg[] = [
 
 function uid() {
   return `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-}
-
-/**
- * Build the Anthropic-bound payload from the UI state + the new user
- * text. Three guarantees:
- *   1. Suggestion bubbles and synthetic Claude messages (greeting,
- *      placeholders) are excluded — they're UI artifacts only.
- *   2. Empty Claude messages (streaming placeholders that never got
- *      any text) are dropped.
- *   3. The result always starts with a user message — defensive strip
- *      of any leading assistant turn, since the Anthropic API rejects
- *      conversations that don't begin with `user`.
- */
-function buildApiMessages(uiMessages: Msg[], newUserText: string): ChatMessage[] {
-  const history: ChatMessage[] = []
-  for (const m of uiMessages) {
-    if (m.role === 'suggestion') continue
-    if (m.role === 'claude' && m.synthetic) continue
-    if (m.role === 'claude' && m.text.trim() === '') continue
-    history.push({
-      role: m.role === 'claude' ? 'assistant' : 'user',
-      content: m.text,
-    })
-  }
-  while (history.length > 0 && history[0].role !== 'user') {
-    history.shift()
-  }
-  return [...history, { role: 'user', content: newUserText }]
 }
 
 export function ColumnCenter() {
