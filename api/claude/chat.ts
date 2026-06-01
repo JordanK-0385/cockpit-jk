@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Anthropic from '@anthropic-ai/sdk'
 import { requireAuthorizedUser, setNoStore } from '../_lib/auth'
+import { buildAnthropicPayload, type ClientMessage } from '../_lib/anthropic'
 
 /**
  * Sprint 2 — Étape 1 : streaming chat backend (text only, no tools,
@@ -15,18 +16,6 @@ import { requireAuthorizedUser, setNoStore } from '../_lib/auth'
  * The Anthropic SDK's own event shape isn't passed through — the client
  * only needs deltas + a terminal marker, so we keep the wire small.
  */
-
-const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5'
-const MAX_TOKENS = 4096
-
-// Minimal system prompt for étape 1. Étape 4 will rebuild this per-request
-// with live Airtable context (projets, tâches du jour, focus, sessions).
-const SYSTEM_PROMPT = `Tu es le collaborateur IA de Jordan Koskas, consultant IA indépendant chez JK Consulting (Neuilly-sur-Seine, France). Tu réponds en français, naturellement et brièvement. Tu es chaleureux mais direct, à l'aise avec la technique. Pour l'instant tu n'as pas encore accès aux données Airtable de Jordan — c'est l'étape suivante du Sprint 2.`
-
-type ClientMessage = {
-  role: 'user' | 'assistant'
-  content: string
-}
 
 function sseWrite(res: VercelResponse, payload: unknown) {
   res.write(`data: ${JSON.stringify(payload)}\n\n`)
@@ -82,12 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const stream = client.messages.stream(
-      {
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      },
+      buildAnthropicPayload(messages),
       { signal: abort.signal },
     )
 
