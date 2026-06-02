@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireAuthorizedUser, setNoStore } from '../_lib/auth'
+import { requireAuthorizedUser, setNoStore } from '../_lib/auth.js'
 
 /**
  * Sprint 1 stub. Sprint 5 will proxy n8n REST API:

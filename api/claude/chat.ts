@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Anthropic from '@anthropic-ai/sdk'
-import { requireAuthorizedUser, setNoStore } from '../_lib/auth'
-import { buildAnthropicPayload, type ClientMessage } from '../_lib/anthropic'
+import { requireAuthorizedUser, setNoStore } from '../_lib/auth.js'
+import { buildAnthropicPayload, type ClientMessage } from '../_lib/anthropic.js'
 
 /**
  * Sprint 2 — Étape 1 : streaming chat backend (text only, no tools,
