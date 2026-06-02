@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireAuthorizedUser, setNoStore } from '../_lib/auth'
-import { airtableList, airtableCreate, airtableUpdate, type AirtableQuery } from '../_lib/airtable'
+import { requireAuthorizedUser, setNoStore } from '../_lib/auth.js'
+import { airtableList, airtableCreate, airtableUpdate, type AirtableQuery } from '../_lib/airtable.js'
 
 /**
  * Generic Airtable proxy.
