@@ -57,6 +57,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  // Build the Airtable-aware system prompt before committing to SSE: the
+  // up-to-4s context read happens here, not as silence on an open stream.
+  // buildSystemPrompt() never throws (internal fallback), so no 500 risk.
+  const system = await buildSystemPrompt()
+
   // SSE headers. X-Accel-Buffering: no prevents intermediate proxies (Vercel
   // edge, nginx) from buffering the response.
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
@@ -71,7 +76,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   req.on('close', () => abort.abort())
 
   try {
-    const system = await buildSystemPrompt()
     const stream = client.messages.stream(
       buildAnthropicPayload(messages, { system }),
       { signal: abort.signal },
