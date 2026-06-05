@@ -1,10 +1,11 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import {
   activeProjectsQuery,
   todayTasksQuery,
   openBlockersQuery,
   recentSessionsQuery,
+  pickPat,
 } from '../../api/_lib/airtable'
 
 describe('query-builders de lecture du contexte', () => {
@@ -50,5 +51,34 @@ describe('query-builders de lecture du contexte', () => {
 
   it('recentSessionsQuery : rejette n < 1', () => {
     expect(() => recentSessionsQuery(0)).toThrow()
+  })
+})
+
+describe('pickPat — moindre privilège (N1)', () => {
+  const ORIG = { ...process.env }
+  afterEach(() => { process.env = { ...ORIG } })
+
+  it("scope 'read' prend AIRTABLE_READ_PAT s'il existe", () => {
+    process.env.AIRTABLE_READ_PAT = 'ro-token'
+    process.env.AIRTABLE_PAT = 'rw-token'
+    expect(pickPat('read')).toBe('ro-token')
+  })
+
+  it("scope 'read' retombe sur AIRTABLE_PAT si read-only absent", () => {
+    delete process.env.AIRTABLE_READ_PAT
+    process.env.AIRTABLE_PAT = 'rw-token'
+    expect(pickPat('read')).toBe('rw-token')
+  })
+
+  it("scope 'write' ignore le read-only et prend AIRTABLE_PAT", () => {
+    process.env.AIRTABLE_READ_PAT = 'ro-token'
+    process.env.AIRTABLE_PAT = 'rw-token'
+    expect(pickPat('write')).toBe('rw-token')
+  })
+
+  it('jette si aucun PAT disponible', () => {
+    delete process.env.AIRTABLE_READ_PAT
+    delete process.env.AIRTABLE_PAT
+    expect(() => pickPat('write')).toThrow(/AIRTABLE_PAT/)
   })
 })

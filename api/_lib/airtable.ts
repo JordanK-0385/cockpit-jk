@@ -34,20 +34,29 @@ export function buildQuery(q: AirtableQuery): string {
   return params.toString()
 }
 
-function ensureCreds() {
+export type AirtablePatScope = 'read' | 'write'
+
+export function pickPat(scope: AirtablePatScope): string {
+  const readOnly = process.env.AIRTABLE_READ_PAT
+  if (scope === 'read' && readOnly) return readOnly
   const pat = process.env.AIRTABLE_PAT
+  if (!pat) throw new Error('AIRTABLE_PAT not set')
+  return pat
+}
+
+function ensureBaseId(): string {
   const baseId = process.env.AIRTABLE_BASE_ID
-  if (!pat || !baseId) {
-    throw new Error('AIRTABLE_PAT or AIRTABLE_BASE_ID not set')
-  }
-  return { pat, baseId }
+  if (!baseId) throw new Error('AIRTABLE_BASE_ID not set')
+  return baseId
 }
 
 export async function airtableList<F = Record<string, unknown>>(
   table: string,
   query: AirtableQuery = {},
+  opts: { scope?: AirtablePatScope } = {},
 ): Promise<ListResponse<F>> {
-  const { pat, baseId } = ensureCreds()
+  const pat = pickPat(opts.scope ?? 'write')
+  const baseId = ensureBaseId()
   const qs = buildQuery(query)
   const url = `${BASE}/${baseId}/${encodeURIComponent(table)}${qs ? `?${qs}` : ''}`
   const r = await fetch(url, {
@@ -64,7 +73,8 @@ export async function airtableCreate<F = Record<string, unknown>>(
   table: string,
   fieldsList: F[],
 ): Promise<{ records: AirtableRecord<F>[] }> {
-  const { pat, baseId } = ensureCreds()
+  const pat = pickPat('write')
+  const baseId = ensureBaseId()
   const url = `${BASE}/${baseId}/${encodeURIComponent(table)}`
   const r = await fetch(url, {
     method: 'POST',
@@ -87,7 +97,8 @@ export async function airtableUpdate<F = Record<string, unknown>>(
   table: string,
   records: { id: string; fields: Partial<F> }[],
 ): Promise<{ records: AirtableRecord<F>[] }> {
-  const { pat, baseId } = ensureCreds()
+  const pat = pickPat('write')
+  const baseId = ensureBaseId()
   const url = `${BASE}/${baseId}/${encodeURIComponent(table)}`
   const r = await fetch(url, {
     method: 'PATCH',
@@ -148,4 +159,37 @@ export function recentSessionsQuery(n: number): AirtableQuery {
     sort: [{ field: 'Date', direction: 'desc' }],
     maxRecords: n,
   }
+}
+
+export type RawProject = {
+  'Nom du projet'?: string
+  'Statut'?: string
+  '% Avancement'?: number
+  'Priorité'?: string
+  'Date cible'?: string
+}
+export type RawTask = {
+  'Titre de la tâche'?: string
+  'Statut'?: string
+  'Priorité'?: string
+  'Date cible'?: string
+}
+export type RawSession = {
+  'Résumé'?: string
+  'Focus du jour'?: string
+  'Date'?: string
+  'Type'?: string
+}
+
+export function getActiveProjects() {
+  return airtableList<RawProject>(PROJECTS_TABLE, activeProjectsQuery(), { scope: 'read' })
+}
+export function getTodayTasks(todayISO: string) {
+  return airtableList<RawTask>(TASKS_TABLE, todayTasksQuery(todayISO), { scope: 'read' })
+}
+export function getOpenBlockers() {
+  return airtableList<RawTask>(TASKS_TABLE, openBlockersQuery(), { scope: 'read' })
+}
+export function getRecentSessions(n = 3) {
+  return airtableList<RawSession>(SESSIONS_TABLE, recentSessionsQuery(n), { scope: 'read' })
 }
