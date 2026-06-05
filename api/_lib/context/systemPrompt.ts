@@ -32,28 +32,34 @@ function focusLine(data: ContextData): string {
 export async function buildSystemPrompt(
   opts: { now?: Date; loadContext?: () => Promise<ContextData>; timeoutMs?: number } = {},
 ): Promise<string> {
-  const now = opts.now ?? new Date()
-  const load = opts.loadContext ?? getAirtableContext
-  const timeoutMs = opts.timeoutMs ?? 4000
-
-  const parts: string[] = [IDENTITY, formatTemporalContext(now)]
-
-  let context: ContextData | null = null
   try {
-    context = await withTimeout(load(), timeoutMs)
+    const now = opts.now ?? new Date()
+    const load = opts.loadContext ?? getAirtableContext
+    const timeoutMs = opts.timeoutMs ?? 4000
+
+    const parts: string[] = [IDENTITY, formatTemporalContext(now)]
+
+    let context: ContextData | null = null
+    try {
+      context = await withTimeout(load(), timeoutMs)
+    } catch (err) {
+      // N2 : on ne logge que le message, jamais le PAT ni les données.
+      console.error('[systemPrompt] contexte indisponible:', err instanceof Error ? err.message : String(err))
+    }
+
+    if (context) {
+      parts.push(DATA_BANNER, formatAirtableContext(context))
+      const focus = focusLine(context)
+      if (focus) parts.push(focus)
+      parts.push(formatSessions(context.sessions))
+    } else {
+      parts.push(CONTEXT_UNAVAILABLE)
+    }
+
+    return parts.join('\n\n')
   } catch (err) {
-    // N2 : on ne logge que le message, jamais le PAT ni les données.
-    console.error('[systemPrompt] contexte indisponible:', err instanceof Error ? err.message : String(err))
+    // Dernier rempart : buildSystemPrompt ne doit JAMAIS jeter (un throw = 500).
+    console.error('[systemPrompt] erreur assemblage:', err instanceof Error ? err.message : String(err))
+    return [IDENTITY, CONTEXT_UNAVAILABLE].join('\n\n')
   }
-
-  if (context) {
-    parts.push(DATA_BANNER, formatAirtableContext(context))
-    const focus = focusLine(context)
-    if (focus) parts.push(focus)
-    parts.push(formatSessions(context.sessions))
-  } else {
-    parts.push(CONTEXT_UNAVAILABLE)
-  }
-
-  return parts.join('\n\n')
 }

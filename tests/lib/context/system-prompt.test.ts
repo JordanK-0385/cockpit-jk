@@ -47,4 +47,11 @@ describe('buildSystemPrompt', () => {
     const out = await buildSystemPrompt({ now: NOW, loadContext: slow, timeoutMs: 5 })
     expect(out).toMatch(/contexte.*indisponible/i)
   })
+
+  it('ne jette jamais, même si l\'assemblage échoue (now invalide → formatteur qui throw)', async () => {
+    const out = await buildSystemPrompt({ now: new Date('pas-une-date'), loadContext: async () => fullContext })
+    expect(typeof out).toBe('string')
+    expect(out).toContain('Jordan Koskas')
+    expect(out).toMatch(/contexte.*indisponible/i)
+  })
 })
