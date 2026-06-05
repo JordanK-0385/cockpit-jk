@@ -11,7 +11,11 @@ describe('mappeurs record → view (minimisation)', () => {
   it('toProjectView : % fraction → entier, champs manquants tolérés', () => {
     expect(
       toProjectView({ fields: { 'Nom du projet': 'Cockpit JK', 'Statut': '🏗️ En cours', '% Avancement': 0.45 } }),
-    ).toEqual({ nom: 'Cockpit JK', statut: '🏗️ En cours', avancement: 45, priorite: undefined, echeance: undefined })
+    ).toEqual({ nom: 'Cockpit JK', statut: '🏗️ En cours', avancement: 45 })
+  })
+
+  it('toProjectView : 0% est rendu (avancement = 0, pas undefined)', () => {
+    expect(toProjectView({ fields: { 'Nom du projet': 'X', '% Avancement': 0 } }).avancement).toBe(0)
   })
 
   it('toTaskView : projette titre/statut/priorité/échéance', () => {
@@ -23,7 +27,7 @@ describe('mappeurs record → view (minimisation)', () => {
 
 describe('formatAirtableContext', () => {
   const data: ContextData = {
-    projects: [{ nom: 'Cockpit JK', statut: '🏗️ En cours', avancement: 45, priorite: '🔴 Haute', echeance: undefined }],
+    projects: [{ nom: 'Cockpit JK', statut: '🏗️ En cours', avancement: 45 }],
     tasks: [{ titre: 'Activer crons', statut: '🎯 À faire', priorite: '🔴 Haute', echeance: '2026-06-05' }],
     blockers: [{ titre: 'Vérif entreprise Meta', statut: '⏸ Bloqué', priorite: '🔴 Haute', echeance: undefined }],
     sessions: [],

@@ -125,7 +125,7 @@ export const SESSIONS_TABLE = 'Sessions Claude'
 
 export function activeProjectsQuery(): AirtableQuery {
   return {
-    fields: ['Nom du projet', 'Statut', '% Avancement', 'Priorité', 'Date cible'],
+    fields: ['Nom du projet', 'Statut', '% Avancement'],
     filterByFormula:
       'AND({Statut}!="📋 Backlog",{Statut}!="✅ Stable",{Statut}!="⏸️ En pause")',
     sort: [{ field: '% Avancement', direction: 'desc' }],
@@ -165,8 +165,6 @@ export type RawProject = {
   'Nom du projet'?: string
   'Statut'?: string
   '% Avancement'?: number
-  'Priorité'?: string
-  'Date cible'?: string
 }
 export type RawTask = {
   'Titre de la tâche'?: string

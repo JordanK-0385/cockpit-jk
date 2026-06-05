@@ -13,8 +13,6 @@ export type ProjectView = {
   nom?: string
   statut?: string
   avancement?: number
-  priorite?: string
-  echeance?: string
 }
 export type TaskView = {
   titre?: string
@@ -35,8 +33,6 @@ export function toProjectView(r: { fields: RawProject }): ProjectView {
     nom: r.fields['Nom du projet'],
     statut: r.fields['Statut'],
     avancement: typeof pct === 'number' ? Math.round(pct * 100) : undefined,
-    priorite: r.fields['Priorité'],
-    echeance: r.fields['Date cible'],
   }
 }
 

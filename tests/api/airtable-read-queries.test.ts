@@ -11,9 +11,7 @@ import {
 describe('query-builders de lecture du contexte', () => {
   it('activeProjectsQuery : exclut les statuts terminaux, trie par % desc, cap 5', () => {
     const q = activeProjectsQuery()
-    expect(q.fields).toEqual([
-      'Nom du projet', 'Statut', '% Avancement', 'Priorité', 'Date cible',
-    ])
+    expect(q.fields).toEqual(['Nom du projet', 'Statut', '% Avancement'])
     expect(q.filterByFormula).toBe(
       'AND({Statut}!="📋 Backlog",{Statut}!="✅ Stable",{Statut}!="⏸️ En pause")',
     )
