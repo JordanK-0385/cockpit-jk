@@ -103,3 +103,45 @@ export async function airtableUpdate<F = Record<string, unknown>>(
   }
   return (await r.json()) as { records: AirtableRecord<F>[] }
 }
+
+// ── Lectures de contexte (Sprint 2, étape 4) ────────────────────────────
+// Noms de tables/champs = schéma réel de la base appyvKVq6Q6kr37La.
+// Statuts terminaux/Terminé portent leur emoji (valeur exacte du singleSelect).
+
+export const PROJECTS_TABLE = 'Projets IA & Automatisation'
+export const TASKS_TABLE = 'Tâches'
+export const SESSIONS_TABLE = 'Sessions Claude'
+
+export function activeProjectsQuery(): AirtableQuery {
+  return {
+    fields: ['Nom du projet', 'Statut', '% Avancement', 'Priorité', 'Date cible'],
+    filterByFormula:
+      'AND({Statut}!="📋 Backlog",{Statut}!="✅ Stable",{Statut}!="⏸️ En pause")',
+    sort: [{ field: '% Avancement', direction: 'desc' }],
+    maxRecords: 5,
+  }
+}
+
+export function todayTasksQuery(todayISO: string): AirtableQuery {
+  return {
+    fields: ['Titre de la tâche', 'Statut', 'Priorité', 'Date cible'],
+    filterByFormula: `AND({Statut}!="✅ Terminé",IS_SAME({Date cible},"${todayISO}",'day'))`,
+    maxRecords: 20,
+  }
+}
+
+export function openBlockersQuery(): AirtableQuery {
+  return {
+    fields: ['Titre de la tâche', 'Statut', 'Priorité'],
+    filterByFormula: 'AND({Bloquant}=1,{Statut}!="✅ Terminé")',
+    maxRecords: 10,
+  }
+}
+
+export function recentSessionsQuery(n: number): AirtableQuery {
+  return {
+    fields: ['Résumé', 'Focus du jour', 'Date', 'Type'],
+    sort: [{ field: 'Date', direction: 'desc' }],
+    maxRecords: n,
+  }
+}
