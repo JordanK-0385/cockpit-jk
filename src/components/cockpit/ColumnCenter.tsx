@@ -23,7 +23,7 @@ const INITIAL_MESSAGES: Msg[] = [
     role: 'claude',
     synthetic: true,
     text:
-      "Bonjour Jordan. Sprint 2 — étape 1 est en place : le chat est branché en streaming à l'API Anthropic. Pour l'instant je n'ai pas encore le contexte de ton Airtable (ça arrive en étape 4) ni de tools (étape 5), mais le pipe fonctionne. Teste avec une question simple.",
+      "Bonjour Jordan. J'ai maintenant le contexte de ton Airtable — projets actifs, tâches du jour, bloquants et tes 3 dernières sessions, rafraîchis à chaque message. Je ne peux pas encore écrire dans la base (les tools arrivent en étape 5). Demande-moi où en est un projet, ce que tu as à faire aujourd'hui, ou un récap de tes dernières sessions.",
   },
 ]
 
@@ -175,7 +175,7 @@ export function ColumnCenter() {
               {sending ? 'Claude réfléchit…' : 'Claude écoute'}
             </span>
           </GlassPill>
-          <span className="eyebrow">Sprint 2 · étape 1</span>
+          <span className="eyebrow">Sprint 2 · étape 4</span>
         </div>
       </div>
 

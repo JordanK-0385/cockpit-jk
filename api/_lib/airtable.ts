@@ -34,20 +34,29 @@ export function buildQuery(q: AirtableQuery): string {
   return params.toString()
 }
 
-function ensureCreds() {
+export type AirtablePatScope = 'read' | 'write'
+
+export function pickPat(scope: AirtablePatScope): string {
+  const readOnly = process.env.AIRTABLE_READ_PAT
+  if (scope === 'read' && readOnly) return readOnly
   const pat = process.env.AIRTABLE_PAT
+  if (!pat) throw new Error('AIRTABLE_PAT not set')
+  return pat
+}
+
+function ensureBaseId(): string {
   const baseId = process.env.AIRTABLE_BASE_ID
-  if (!pat || !baseId) {
-    throw new Error('AIRTABLE_PAT or AIRTABLE_BASE_ID not set')
-  }
-  return { pat, baseId }
+  if (!baseId) throw new Error('AIRTABLE_BASE_ID not set')
+  return baseId
 }
 
 export async function airtableList<F = Record<string, unknown>>(
   table: string,
   query: AirtableQuery = {},
+  opts: { scope?: AirtablePatScope } = {},
 ): Promise<ListResponse<F>> {
-  const { pat, baseId } = ensureCreds()
+  const pat = pickPat(opts.scope ?? 'read')
+  const baseId = ensureBaseId()
   const qs = buildQuery(query)
   const url = `${BASE}/${baseId}/${encodeURIComponent(table)}${qs ? `?${qs}` : ''}`
   const r = await fetch(url, {
@@ -64,7 +73,8 @@ export async function airtableCreate<F = Record<string, unknown>>(
   table: string,
   fieldsList: F[],
 ): Promise<{ records: AirtableRecord<F>[] }> {
-  const { pat, baseId } = ensureCreds()
+  const pat = pickPat('write')
+  const baseId = ensureBaseId()
   const url = `${BASE}/${baseId}/${encodeURIComponent(table)}`
   const r = await fetch(url, {
     method: 'POST',
@@ -87,7 +97,8 @@ export async function airtableUpdate<F = Record<string, unknown>>(
   table: string,
   records: { id: string; fields: Partial<F> }[],
 ): Promise<{ records: AirtableRecord<F>[] }> {
-  const { pat, baseId } = ensureCreds()
+  const pat = pickPat('write')
+  const baseId = ensureBaseId()
   const url = `${BASE}/${baseId}/${encodeURIComponent(table)}`
   const r = await fetch(url, {
     method: 'PATCH',
@@ -102,4 +113,82 @@ export async function airtableUpdate<F = Record<string, unknown>>(
     throw new Error(`Airtable ${r.status}: ${text}`)
   }
   return (await r.json()) as { records: AirtableRecord<F>[] }
+}
+
+// ── Lectures de contexte (Sprint 2, étape 4) ────────────────────────────
+// Noms de tables/champs = schéma réel de la base appyvKVq6Q6kr37La.
+// Statuts terminaux/Terminé portent leur emoji (valeur exacte du singleSelect).
+
+export const PROJECTS_TABLE = 'Projets IA & Automatisation'
+export const TASKS_TABLE = 'Tâches'
+export const SESSIONS_TABLE = 'Sessions Claude'
+
+// Pas de cap : on injecte TOUS les projets non terminaux (décision produit du
+// 05/06 — la base en a ~18, et un cap par % enterrait des projets en cours
+// comme Cockpit). Tri par % décroissant pour lisibilité.
+export function activeProjectsQuery(): AirtableQuery {
+  return {
+    fields: ['Nom du projet', 'Statut', '% Avancement'],
+    filterByFormula:
+      'AND({Statut}!="📋 Backlog",{Statut}!="✅ Stable",{Statut}!="⏸️ En pause")',
+    sort: [{ field: '% Avancement', direction: 'desc' }],
+  }
+}
+
+export function todayTasksQuery(todayISO: string): AirtableQuery {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(todayISO)) {
+    throw new Error(`todayTasksQuery: todayISO doit être au format YYYY-MM-DD, reçu: ${todayISO}`)
+  }
+  return {
+    fields: ['Titre de la tâche', 'Statut', 'Priorité'],
+    filterByFormula: `AND({Statut}!="✅ Terminé",IS_SAME({Date cible},"${todayISO}",'day'))`,
+    maxRecords: 20,
+  }
+}
+
+export function openBlockersQuery(): AirtableQuery {
+  return {
+    fields: ['Titre de la tâche', 'Statut', 'Priorité'],
+    filterByFormula: 'AND({Bloquant}=1,{Statut}!="✅ Terminé")',
+    maxRecords: 10,
+  }
+}
+
+export function recentSessionsQuery(n: number): AirtableQuery {
+  if (n < 1) throw new Error(`recentSessionsQuery: n doit être ≥ 1, reçu: ${n}`)
+  return {
+    fields: ['Résumé', 'Focus du jour', 'Date', 'Type'],
+    sort: [{ field: 'Date', direction: 'desc' }],
+    maxRecords: n,
+  }
+}
+
+export type RawProject = {
+  'Nom du projet'?: string
+  'Statut'?: string
+  '% Avancement'?: number
+}
+export type RawTask = {
+  'Titre de la tâche'?: string
+  'Statut'?: string
+  'Priorité'?: string
+}
+export type RawSession = {
+  'Résumé'?: string
+  'Focus du jour'?: string
+  'Date'?: string
+  'Type'?: string
+}
+
+export function getActiveProjects() {
+  return airtableList<RawProject>(PROJECTS_TABLE, activeProjectsQuery(), { scope: 'read' })
+}
+export function getTodayTasks(todayISO: string) {
+  return airtableList<RawTask>(TASKS_TABLE, todayTasksQuery(todayISO), { scope: 'read' })
+}
+export function getOpenBlockers() {
+  return airtableList<RawTask>(TASKS_TABLE, openBlockersQuery(), { scope: 'read' })
+}
+export function getRecentSessions(n = 3) {
+  return airtableList<RawSession>(SESSIONS_TABLE, recentSessionsQuery(n), { scope: 'read' })
 }

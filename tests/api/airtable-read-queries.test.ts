@@ -1,0 +1,82 @@
+// @vitest-environment node
+import { describe, it, expect, afterEach } from 'vitest'
+import {
+  activeProjectsQuery,
+  todayTasksQuery,
+  openBlockersQuery,
+  recentSessionsQuery,
+  pickPat,
+} from '../../api/_lib/airtable'
+
+describe('query-builders de lecture du contexte', () => {
+  it('activeProjectsQuery : exclut les statuts terminaux, trie par % desc, sans cap', () => {
+    const q = activeProjectsQuery()
+    expect(q.fields).toEqual(['Nom du projet', 'Statut', '% Avancement'])
+    expect(q.filterByFormula).toBe(
+      'AND({Statut}!="📋 Backlog",{Statut}!="✅ Stable",{Statut}!="⏸️ En pause")',
+    )
+    expect(q.sort).toEqual([{ field: '% Avancement', direction: 'desc' }])
+    expect(q.maxRecords).toBeUndefined()
+  })
+
+  it('todayTasksQuery : non terminé ET échéance = date du jour injectée', () => {
+    const q = todayTasksQuery('2026-06-05')
+    expect(q.fields).toEqual(['Titre de la tâche', 'Statut', 'Priorité'])
+    expect(q.filterByFormula).toBe(
+      `AND({Statut}!="✅ Terminé",IS_SAME({Date cible},"2026-06-05",'day'))`,
+    )
+    expect(q.maxRecords).toBe(20)
+  })
+
+  it('openBlockersQuery : Bloquant coché ET non terminé', () => {
+    const q = openBlockersQuery()
+    expect(q.fields).toEqual(['Titre de la tâche', 'Statut', 'Priorité'])
+    expect(q.filterByFormula).toBe('AND({Bloquant}=1,{Statut}!="✅ Terminé")')
+    expect(q.maxRecords).toBe(10)
+  })
+
+  it('recentSessionsQuery : tri Date desc, cap = n', () => {
+    const q = recentSessionsQuery(3)
+    expect(q.fields).toEqual(['Résumé', 'Focus du jour', 'Date', 'Type'])
+    expect(q.sort).toEqual([{ field: 'Date', direction: 'desc' }])
+    expect(q.maxRecords).toBe(3)
+    expect(q.filterByFormula).toBeUndefined()
+  })
+
+  it('todayTasksQuery : rejette un format de date invalide', () => {
+    expect(() => todayTasksQuery('05/06/2026')).toThrow(/YYYY-MM-DD/)
+  })
+
+  it('recentSessionsQuery : rejette n < 1', () => {
+    expect(() => recentSessionsQuery(0)).toThrow()
+  })
+})
+
+describe('pickPat — moindre privilège (N1)', () => {
+  const ORIG = { ...process.env }
+  afterEach(() => { process.env = { ...ORIG } })
+
+  it("scope 'read' prend AIRTABLE_READ_PAT s'il existe", () => {
+    process.env.AIRTABLE_READ_PAT = 'ro-token'
+    process.env.AIRTABLE_PAT = 'rw-token'
+    expect(pickPat('read')).toBe('ro-token')
+  })
+
+  it("scope 'read' retombe sur AIRTABLE_PAT si read-only absent", () => {
+    delete process.env.AIRTABLE_READ_PAT
+    process.env.AIRTABLE_PAT = 'rw-token'
+    expect(pickPat('read')).toBe('rw-token')
+  })
+
+  it("scope 'write' ignore le read-only et prend AIRTABLE_PAT", () => {
+    process.env.AIRTABLE_READ_PAT = 'ro-token'
+    process.env.AIRTABLE_PAT = 'rw-token'
+    expect(pickPat('write')).toBe('rw-token')
+  })
+
+  it('jette si aucun PAT disponible', () => {
+    delete process.env.AIRTABLE_READ_PAT
+    delete process.env.AIRTABLE_PAT
+    expect(() => pickPat('write')).toThrow(/AIRTABLE_PAT/)
+  })
+})

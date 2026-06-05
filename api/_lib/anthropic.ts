@@ -13,9 +13,10 @@ export type AnthropicPayload = {
 export const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5'
 export const MAX_TOKENS = 4096
 
-// Étape 4 du Sprint 2 réécrira ce prompt par requête avec le contexte
-// Airtable (projets, tâches du jour, focus, sessions).
-export const SYSTEM_PROMPT = `Tu es le collaborateur IA de Jordan Koskas, consultant IA indépendant chez JK Consulting (Neuilly-sur-Seine, France). Tu réponds en français, naturellement et brièvement. Tu es chaleureux mais direct, à l'aise avec la technique. Pour l'instant tu n'as pas encore accès aux données Airtable de Jordan — c'est l'étape suivante du Sprint 2.`
+// Fallback system prompt — utilisé uniquement quand buildAnthropicPayload est
+// appelé sans opts.system (tests unitaires). En production, chat.ts passe le
+// prompt complet construit par buildSystemPrompt() (Sprint 2 étape 4).
+export const SYSTEM_PROMPT = `Tu es le collaborateur IA de Jordan Koskas, consultant IA indépendant chez JK Consulting (Neuilly-sur-Seine, France). Tu réponds en français, naturellement et brièvement. Tu es chaleureux mais direct, à l'aise avec la technique.`
 
 /**
  * Pure mapping: client-facing messages → the payload object passed to
