@@ -2,11 +2,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Anthropic from '@anthropic-ai/sdk'
 import { requireAuthorizedUser, setNoStore } from '../_lib/auth.js'
 import { buildAnthropicPayload, type ClientMessage } from '../_lib/anthropic.js'
+import { buildSystemPrompt } from '../_lib/context/systemPrompt.js'
 
 /**
- * Sprint 2 — Étape 1 : streaming chat backend (text only, no tools,
- * no Airtable context yet). Later étapes layer on system-prompt context
- * (étape 4), tool use (étape 5+), and persistence to Firestore (étape 3).
+ * Sprint 2 — Étape 4 : le system prompt est reconstruit à chaque message via
+ * buildSystemPrompt() (identité + temporel + contexte Airtable + sessions).
+ * Tool use (étape 5+) et persistance Firestore (étape 3) viennent après.
  *
  * Wire format (custom SSE, parsed by src/lib/chat.ts):
  *   data: {"type":"text","text":"..."}\n\n      → token delta
@@ -70,8 +71,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   req.on('close', () => abort.abort())
 
   try {
+    const system = await buildSystemPrompt()
     const stream = client.messages.stream(
-      buildAnthropicPayload(messages),
+      buildAnthropicPayload(messages, { system }),
       { signal: abort.signal },
     )
 
