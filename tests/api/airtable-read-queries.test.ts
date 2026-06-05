@@ -9,14 +9,14 @@ import {
 } from '../../api/_lib/airtable'
 
 describe('query-builders de lecture du contexte', () => {
-  it('activeProjectsQuery : exclut les statuts terminaux, trie par % desc, cap 5', () => {
+  it('activeProjectsQuery : exclut les statuts terminaux, trie par % desc, sans cap', () => {
     const q = activeProjectsQuery()
     expect(q.fields).toEqual(['Nom du projet', 'Statut', '% Avancement'])
     expect(q.filterByFormula).toBe(
       'AND({Statut}!="📋 Backlog",{Statut}!="✅ Stable",{Statut}!="⏸️ En pause")',
     )
     expect(q.sort).toEqual([{ field: '% Avancement', direction: 'desc' }])
-    expect(q.maxRecords).toBe(5)
+    expect(q.maxRecords).toBeUndefined()
   })
 
   it('todayTasksQuery : non terminé ET échéance = date du jour injectée', () => {

@@ -123,13 +123,15 @@ export const PROJECTS_TABLE = 'Projets IA & Automatisation'
 export const TASKS_TABLE = 'Tâches'
 export const SESSIONS_TABLE = 'Sessions Claude'
 
+// Pas de cap : on injecte TOUS les projets non terminaux (décision produit du
+// 05/06 — la base en a ~18, et un cap par % enterrait des projets en cours
+// comme Cockpit). Tri par % décroissant pour lisibilité.
 export function activeProjectsQuery(): AirtableQuery {
   return {
     fields: ['Nom du projet', 'Statut', '% Avancement'],
     filterByFormula:
       'AND({Statut}!="📋 Backlog",{Statut}!="✅ Stable",{Statut}!="⏸️ En pause")',
     sort: [{ field: '% Avancement', direction: 'desc' }],
-    maxRecords: 5,
   }
 }
 

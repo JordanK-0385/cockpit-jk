@@ -35,7 +35,9 @@ export async function buildSystemPrompt(
   try {
     const now = opts.now ?? new Date()
     const load = opts.loadContext ?? getAirtableContext
-    const timeoutMs = opts.timeoutMs ?? 4000
+    // 5s = haut de la fourchette spec (3–5s). Mesuré : 4 lectures Airtable
+    // parallèles ~1,4s à chaud ; le cold-start frôlait 4s, d'où la marge.
+    const timeoutMs = opts.timeoutMs ?? 5000
 
     const parts: string[] = [IDENTITY, formatTemporalContext(now)]
 
