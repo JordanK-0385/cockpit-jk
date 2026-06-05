@@ -41,5 +41,14 @@ describe('query-builders de lecture du contexte', () => {
     expect(q.fields).toEqual(['Résumé', 'Focus du jour', 'Date', 'Type'])
     expect(q.sort).toEqual([{ field: 'Date', direction: 'desc' }])
     expect(q.maxRecords).toBe(3)
+    expect(q.filterByFormula).toBeUndefined()
+  })
+
+  it('todayTasksQuery : rejette un format de date invalide', () => {
+    expect(() => todayTasksQuery('05/06/2026')).toThrow(/YYYY-MM-DD/)
+  })
+
+  it('recentSessionsQuery : rejette n < 1', () => {
+    expect(() => recentSessionsQuery(0)).toThrow()
   })
 })

@@ -123,6 +123,9 @@ export function activeProjectsQuery(): AirtableQuery {
 }
 
 export function todayTasksQuery(todayISO: string): AirtableQuery {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(todayISO)) {
+    throw new Error(`todayTasksQuery: todayISO doit être au format YYYY-MM-DD, reçu: ${todayISO}`)
+  }
   return {
     fields: ['Titre de la tâche', 'Statut', 'Priorité', 'Date cible'],
     filterByFormula: `AND({Statut}!="✅ Terminé",IS_SAME({Date cible},"${todayISO}",'day'))`,
@@ -139,6 +142,7 @@ export function openBlockersQuery(): AirtableQuery {
 }
 
 export function recentSessionsQuery(n: number): AirtableQuery {
+  if (n < 1) throw new Error(`recentSessionsQuery: n doit être ≥ 1, reçu: ${n}`)
   return {
     fields: ['Résumé', 'Focus du jour', 'Date', 'Type'],
     sort: [{ field: 'Date', direction: 'desc' }],
