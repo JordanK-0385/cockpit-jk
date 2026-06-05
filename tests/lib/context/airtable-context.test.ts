@@ -18,18 +18,18 @@ describe('mappeurs record → view (minimisation)', () => {
     expect(toProjectView({ fields: { 'Nom du projet': 'X', '% Avancement': 0 } }).avancement).toBe(0)
   })
 
-  it('toTaskView : projette titre/statut/priorité/échéance', () => {
+  it('toTaskView : projette titre/statut/priorité', () => {
     expect(
-      toTaskView({ fields: { 'Titre de la tâche': 'Activer crons', 'Statut': '🎯 À faire', 'Priorité': '🔴 Haute', 'Date cible': '2026-06-05' } }),
-    ).toEqual({ titre: 'Activer crons', statut: '🎯 À faire', priorite: '🔴 Haute', echeance: '2026-06-05' })
+      toTaskView({ fields: { 'Titre de la tâche': 'Activer crons', 'Statut': '🎯 À faire', 'Priorité': '🔴 Haute' } }),
+    ).toEqual({ titre: 'Activer crons', statut: '🎯 À faire', priorite: '🔴 Haute' })
   })
 })
 
 describe('formatAirtableContext', () => {
   const data: ContextData = {
     projects: [{ nom: 'Cockpit JK', statut: '🏗️ En cours', avancement: 45 }],
-    tasks: [{ titre: 'Activer crons', statut: '🎯 À faire', priorite: '🔴 Haute', echeance: '2026-06-05' }],
-    blockers: [{ titre: 'Vérif entreprise Meta', statut: '⏸ Bloqué', priorite: '🔴 Haute', echeance: undefined }],
+    tasks: [{ titre: 'Activer crons', statut: '🎯 À faire', priorite: '🔴 Haute' }],
+    blockers: [{ titre: 'Vérif entreprise Meta', statut: '⏸ Bloqué', priorite: '🔴 Haute' }],
     sessions: [],
   }
 

@@ -55,7 +55,7 @@ export async function airtableList<F = Record<string, unknown>>(
   query: AirtableQuery = {},
   opts: { scope?: AirtablePatScope } = {},
 ): Promise<ListResponse<F>> {
-  const pat = pickPat(opts.scope ?? 'write')
+  const pat = pickPat(opts.scope ?? 'read')
   const baseId = ensureBaseId()
   const qs = buildQuery(query)
   const url = `${BASE}/${baseId}/${encodeURIComponent(table)}${qs ? `?${qs}` : ''}`
@@ -140,7 +140,7 @@ export function todayTasksQuery(todayISO: string): AirtableQuery {
     throw new Error(`todayTasksQuery: todayISO doit être au format YYYY-MM-DD, reçu: ${todayISO}`)
   }
   return {
-    fields: ['Titre de la tâche', 'Statut', 'Priorité', 'Date cible'],
+    fields: ['Titre de la tâche', 'Statut', 'Priorité'],
     filterByFormula: `AND({Statut}!="✅ Terminé",IS_SAME({Date cible},"${todayISO}",'day'))`,
     maxRecords: 20,
   }
@@ -172,7 +172,6 @@ export type RawTask = {
   'Titre de la tâche'?: string
   'Statut'?: string
   'Priorité'?: string
-  'Date cible'?: string
 }
 export type RawSession = {
   'Résumé'?: string

@@ -21,7 +21,7 @@ describe('query-builders de lecture du contexte', () => {
 
   it('todayTasksQuery : non terminé ET échéance = date du jour injectée', () => {
     const q = todayTasksQuery('2026-06-05')
-    expect(q.fields).toEqual(['Titre de la tâche', 'Statut', 'Priorité', 'Date cible'])
+    expect(q.fields).toEqual(['Titre de la tâche', 'Statut', 'Priorité'])
     expect(q.filterByFormula).toBe(
       `AND({Statut}!="✅ Terminé",IS_SAME({Date cible},"2026-06-05",'day'))`,
     )

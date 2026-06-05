@@ -40,11 +40,11 @@ export function shortFrDate(iso: string): string {
 }
 
 export function formatSessions(sessions: SessionView[]): string {
-  if (!sessions.length) return '## 3 dernières sessions\nAucune session enregistrée.'
+  if (!sessions.length) return '## Dernières sessions\nAucune session enregistrée.'
   const blocks = sessions.map((s) => {
     const head = `### ${frDate(s.date)}${s.type ? ` — ${s.type}` : ''}`
     const resume = s.resume ? truncate(s.resume, MAX_RESUME) : '(pas de résumé)'
     return `${head}\n${resume}`
   })
-  return `## 3 dernières sessions\n${blocks.join('\n\n')}`
+  return `## Dernières sessions\n${blocks.join('\n\n')}`
 }

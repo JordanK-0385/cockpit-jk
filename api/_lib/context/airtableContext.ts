@@ -18,7 +18,6 @@ export type TaskView = {
   titre?: string
   statut?: string
   priorite?: string
-  echeance?: string
 }
 export type ContextData = {
   projects: ProjectView[]
@@ -41,7 +40,6 @@ export function toTaskView(r: { fields: RawTask }): TaskView {
     titre: r.fields['Titre de la tâche'],
     statut: r.fields['Statut'],
     priorite: r.fields['Priorité'],
-    echeance: r.fields['Date cible'],
   }
 }
 
