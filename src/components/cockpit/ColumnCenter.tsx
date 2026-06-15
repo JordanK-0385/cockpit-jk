@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -18,6 +19,8 @@ import { streamChat } from '@/lib/chat'
 import { buildApiMessages, type Msg } from '@/lib/chat-messages'
 import { useAuth } from '@/lib/auth'
 import { loadHistory, saveTurn } from '@/lib/chat-store'
+import { useActiveTasks, useProjects, useRecentSessions } from '@/lib/queries'
+import { buildSuggestions } from '@/lib/suggestions'
 
 const INITIAL_MESSAGES: Msg[] = [
   {
@@ -25,7 +28,7 @@ const INITIAL_MESSAGES: Msg[] = [
     role: 'claude',
     synthetic: true,
     text:
-      "Bonjour Jordan. J'ai maintenant le contexte de ton Airtable — projets actifs, tâches du jour, bloquants et tes 3 dernières sessions, rafraîchis à chaque message. Je ne peux pas encore écrire dans la base (les tools arrivent en étape 5). Demande-moi où en est un projet, ce que tu as à faire aujourd'hui, ou un récap de tes dernières sessions.",
+      "Bonjour Jordan. J'ai le contexte de ton Airtable — projets actifs, tâches du jour, bloquants et tes 3 dernières sessions, rafraîchis à chaque message. Je peux aussi créer des tâches et changer leur statut directement dans la base, et je garde l'historique de nos conversations. Demande-moi où en est un projet, ce que tu as à faire aujourd'hui, ou un récap de tes dernières sessions.",
   },
 ]
 
@@ -57,6 +60,22 @@ export function ColumnCenter() {
   // near the bottom. If they scrolled up to re-read, we leave them
   // alone and skip the layout work entirely.
   const isNearBottomRef = useRef(true)
+
+  // Proactive suggestions (étape 7): deterministic chips derived from the
+  // Airtable data ALREADY cached by react-query. No new network/LLM call —
+  // these hooks share the cache populated by the Cockpit columns.
+  const tasksQuery = useActiveTasks()
+  const projectsQuery = useProjects()
+  const sessionsQuery = useRecentSessions(3)
+  const suggestions = useMemo(
+    () =>
+      buildSuggestions({
+        tasks: (tasksQuery.data ?? []).map((r) => r.fields),
+        projects: (projectsQuery.data ?? []).map((r) => r.fields),
+        sessions: (sessionsQuery.data ?? []).map((r) => r.fields),
+      }),
+    [tasksQuery.data, projectsQuery.data, sessionsQuery.data],
+  )
 
   // Load the persisted conversation once the user is known. If there's a
   // stored history we render it; otherwise we fall back to the synthetic
@@ -111,13 +130,14 @@ export function ColumnCenter() {
       el.scrollTop + el.clientHeight >= el.scrollHeight - 100
   }, [])
 
-  async function handleSubmit(e?: FormEvent) {
-    e?.preventDefault()
-    const text = input.trim()
+  // Core send path, shared by the form and the suggestion chips. Takes the
+  // text directly so a chip click can submit its phrase as a user message
+  // without going through the input box.
+  async function submitText(raw: string) {
+    const text = raw.trim()
     if (!text || sending) return
 
     setError(null)
-    setInput('')
     setSending(true)
 
     const userMsg: Msg = { id: uid(), role: 'user', text }
@@ -199,12 +219,30 @@ export function ColumnCenter() {
     }
   }
 
+  function handleSubmit(e?: FormEvent) {
+    e?.preventDefault()
+    const text = input.trim()
+    if (!text || sending) return
+    // Only the form clears the visible input; submitText owns the rest.
+    setInput('')
+    void submitText(text)
+  }
+
   function handleKey(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       void handleSubmit()
     }
   }
+
+  // Suggestions show ONLY at the very start of a conversation: history loaded,
+  // not sending, and no real user/claude turn yet (the synthetic greeting
+  // doesn't count). Once Jordan has exchanged a turn or a stored history is
+  // shown, they disappear.
+  const hasRealTurn = messages.some(
+    (m) => m.role === 'user' || (m.role === 'claude' && !m.synthetic),
+  )
+  const showSuggestions = historyLoaded && !sending && !hasRealTurn && suggestions.length > 0
 
   return (
     <section
@@ -221,7 +259,7 @@ export function ColumnCenter() {
               {sending ? 'Claude réfléchit…' : 'Claude écoute'}
             </span>
           </GlassPill>
-          <span className="eyebrow">Sprint 2 · étape 4</span>
+          <span className="eyebrow">Sprint 2 · étape 7</span>
         </div>
       </div>
 
@@ -236,6 +274,28 @@ export function ColumnCenter() {
           </div>
         ) : (
           messages.map((m) => <MessageRow key={m.id} msg={m} />)
+        )}
+
+        {showSuggestions && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => void submitText(s)}
+                disabled={sending}
+                className="text-left"
+                aria-label={`Suggestion : ${s}`}
+              >
+                <GlassPill
+                  tone="glacier"
+                  className="cursor-pointer transition-colors hover:bg-glass-16"
+                >
+                  <span className="text-xs">{s}</span>
+                </GlassPill>
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
