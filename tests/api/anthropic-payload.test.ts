@@ -28,6 +28,23 @@ describe('buildAnthropicPayload — ClientMessage[] → Anthropic stream payload
     ])
   })
 
+  it('omits tools when none are provided', () => {
+    const payload = buildAnthropicPayload([{ role: 'user', content: 'hi' }])
+    expect(payload.tools).toBeUndefined()
+  })
+
+  it('passes through opts.tools when provided', () => {
+    const tools = [
+      {
+        name: 'create_task',
+        description: 'demo',
+        input_schema: { type: 'object' as const, properties: {} },
+      },
+    ]
+    const payload = buildAnthropicPayload([{ role: 'user', content: 'hi' }], { tools })
+    expect(payload.tools).toBe(tools)
+  })
+
   it('honors opts overrides and returns a fresh messages array (no shared reference)', () => {
     const messages: ClientMessage[] = [{ role: 'user', content: 'hello' }]
 
