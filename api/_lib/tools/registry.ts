@@ -1,12 +1,14 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import { createTaskTool, executeCreateTask } from './createTask.js'
+import { updateTaskStatusTool, executeUpdateTaskStatus } from './updateTaskStatus.js'
 
 /**
  * Allowlist stricte des tools exécutables (Protocole JK N4/N5).
  *
- * SEULE entrée autorisée : create_task. Tout nom hors de cette map est rejeté
- * par runTool — le modèle ne peut déclencher aucune autre écriture, et il n'y
- * a aucun chemin générique vers airtableCreate/airtableUpdate.
+ * Entrées autorisées : create_task (écriture), update_task_status (modification
+ * de Statut). Tout nom hors de cette map est rejeté par runTool — le modèle ne
+ * peut déclencher aucune autre écriture, et il n'y a aucun chemin générique vers
+ * airtableCreate/airtableUpdate.
  */
 
 type ToolExecutor = (input: unknown) => Promise<unknown>
@@ -20,6 +22,11 @@ const ALLOWLIST: Record<string, ToolEntry> = {
   create_task: {
     schema: createTaskTool,
     execute: (input) => executeCreateTask(input as Parameters<typeof executeCreateTask>[0]),
+  },
+  update_task_status: {
+    schema: updateTaskStatusTool,
+    execute: (input) =>
+      executeUpdateTaskStatus(input as Parameters<typeof executeUpdateTaskStatus>[0]),
   },
 }
 
