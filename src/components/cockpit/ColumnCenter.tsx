@@ -16,6 +16,8 @@ import { MarkdownBubble } from '@/components/chat/MarkdownBubble'
 import { cn, logger } from '@/lib/utils'
 import { streamChat } from '@/lib/chat'
 import { buildApiMessages, type Msg } from '@/lib/chat-messages'
+import { useAuth } from '@/lib/auth'
+import { loadHistory, saveTurn } from '@/lib/chat-store'
 
 const INITIAL_MESSAGES: Msg[] = [
   {
@@ -32,7 +34,13 @@ function uid() {
 }
 
 export function ColumnCenter() {
-  const [messages, setMessages] = useState<Msg[]>(INITIAL_MESSAGES)
+  const { user } = useAuth()
+  const userId = user?.uid ?? null
+  // Start empty (NOT with the greeting) so the synthetic greeting can't flash
+  // before we know whether a persisted history exists. The greeting is only
+  // injected once loadHistory confirms there is no stored conversation.
+  const [messages, setMessages] = useState<Msg[]>([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +57,31 @@ export function ColumnCenter() {
   // near the bottom. If they scrolled up to re-read, we leave them
   // alone and skip the layout work entirely.
   const isNearBottomRef = useRef(true)
+
+  // Load the persisted conversation once the user is known. If there's a
+  // stored history we render it; otherwise we fall back to the synthetic
+  // greeting. Either way we flip `historyLoaded` so the UI stops showing the
+  // loading state. A failed read degrades gracefully to the greeting.
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    setHistoryLoaded(false)
+    loadHistory(userId)
+      .then((history) => {
+        if (cancelled) return
+        setMessages(history.length > 0 ? history : INITIAL_MESSAGES)
+        setHistoryLoaded(true)
+      })
+      .catch((err) => {
+        logger.error('loadHistory failed', err)
+        if (cancelled) return
+        setMessages(INITIAL_MESSAGES)
+        setHistoryLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
 
   useEffect(() => {
     if (!isNearBottomRef.current) return
@@ -101,10 +134,15 @@ export function ColumnCenter() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
+    // Accumulate the final Claude text out-of-band so onDone can persist it
+    // without reading stale `messages` state from the closure.
+    let finalClaudeText = ''
+
     try {
       await streamChat(conversationForApi, {
         signal: ctrl.signal,
         onText: (delta) => {
+          finalClaudeText += delta
           setMessages((prev) =>
             prev.map((m) =>
               m.id === claudeMsg.id && m.role === 'claude'
@@ -121,6 +159,14 @@ export function ColumnCenter() {
                 : m,
             ),
           )
+          // Persist only a COMPLETED turn (onDone never fires on error/abort).
+          // saveTurn itself no-ops on empty Claude text, so the conversation
+          // never desyncs. Fire-and-forget: persistence must not block the UI.
+          if (userId && finalClaudeText.trim() !== '') {
+            void saveTurn(userId, text, finalClaudeText).catch((err) =>
+              logger.error('saveTurn failed', err),
+            )
+          }
         },
         onError: (err) => {
           logger.error('streamChat error', err)
@@ -181,9 +227,16 @@ export function ColumnCenter() {
 
       {/* messages */}
       <div className="flex-1 px-6 py-6 space-y-4">
-        {messages.map((m) => (
-          <MessageRow key={m.id} msg={m} />
-        ))}
+        {!historyLoaded ? (
+          <div className="flex justify-center pt-6">
+            <GlassPill tone="sage">
+              <Sparkles className="h-3.5 w-3.5 text-sage animate-pill-pulse" />
+              <span className="text-xs">Chargement de la conversation…</span>
+            </GlassPill>
+          </div>
+        ) : (
+          messages.map((m) => <MessageRow key={m.id} msg={m} />)
+        )}
       </div>
 
       {/* sticky input + error */}

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { buildApiMessages, type Msg } from '../../src/lib/chat-messages'
+import { buildApiMessages, MAX_TURNS, type Msg } from '../../src/lib/chat-messages'
 
 describe('buildApiMessages — UI state → Anthropic ChatMessage[]', () => {
   // === The bug from 2026-05-11 ===
@@ -79,5 +79,39 @@ describe('buildApiMessages — UI state → Anthropic ChatMessage[]', () => {
     expect(buildApiMessages([], 'Premier message')).toEqual([
       { role: 'user', content: 'Premier message' },
     ])
+  })
+
+  // === Garde-fou coût (Sprint 2 étape 3) ===
+  // L'affichage garde tout l'historique, mais l'envoi API est borné aux
+  // MAX_TURNS derniers tours pour éviter une facture qui gonfle à chaque
+  // message sur une longue conversation persistée.
+  it('caps the API payload to the last MAX_TURNS turns, dropping the oldest', () => {
+    const history: Msg[] = []
+    for (let i = 1; i <= MAX_TURNS + 2; i++) {
+      history.push({ id: `u${i}`, role: 'user', text: `u${i}` })
+      history.push({ id: `c${i}`, role: 'claude', text: `c${i}` })
+    }
+
+    const result = buildApiMessages(history, 'nouveau')
+
+    // MAX_TURNS paires conservées (= MAX_TURNS*2 messages) + le nouveau user.
+    expect(result).toHaveLength(MAX_TURNS * 2 + 1)
+    // Les 2 tours les plus anciens (u1,c1,u2,c2) sont coupés → début à u3.
+    expect(result[0]).toEqual({ role: 'user', content: 'u3' })
+    expect(result.some((m) => m.content === 'u1')).toBe(false)
+    expect(result.some((m) => m.content === 'c2')).toBe(false)
+    // Se termine toujours par le nouveau message user.
+    expect(result[result.length - 1]).toEqual({ role: 'user', content: 'nouveau' })
+  })
+
+  it('still starts with a user turn after capping mid-pair', () => {
+    // Si la coupe tombe sur un assistant en tête, le strip défensif le retire.
+    const history: Msg[] = []
+    for (let i = 1; i <= MAX_TURNS + 5; i++) {
+      history.push({ id: `u${i}`, role: 'user', text: `u${i}` })
+      history.push({ id: `c${i}`, role: 'claude', text: `c${i}` })
+    }
+    const result = buildApiMessages(history, 'suite')
+    expect(result[0].role).toBe('user')
   })
 })
