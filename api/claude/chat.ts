@@ -3,6 +3,11 @@ import Anthropic from '@anthropic-ai/sdk'
 import { requireAuthorizedUser, setNoStore } from '../_lib/auth.js'
 import { buildAnthropicPayload, type ClientMessage } from '../_lib/anthropic.js'
 import { buildSystemPrompt } from '../_lib/context/systemPrompt.js'
+import { runTool, toolSchemas } from '../_lib/tools/registry.js'
+
+// Anti-boucle / Denial-of-Wallet : nombre maxi de tours tool-use avant stop
+// forcé. Au-delà, on arrête sans exécuter les tools du dernier tour.
+const MAX_TOOL_ITERATIONS = 5
 
 /**
  * Sprint 2 — Étape 4 : le system prompt est reconstruit à chaque message via
@@ -76,17 +81,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   req.on('close', () => abort.abort())
 
   try {
-    const stream = client.messages.stream(
-      buildAnthropicPayload(messages, { system }),
-      { signal: abort.signal },
-    )
+    // Base payload (model, max_tokens, system, tools). Les messages sont
+    // remplacés à chaque tour par la conversation interne qui, elle, peut
+    // porter des blocs tool_use / tool_result (pas juste des strings).
+    const basePayload = buildAnthropicPayload(messages, { system, tools: toolSchemas })
+    const convo: Anthropic.MessageParam[] = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }))
 
-    stream.on('text', (delta) => {
-      if (!delta) return
-      sseWrite(res, { type: 'text', text: delta })
-    })
+    let final: Anthropic.Message
+    let iterations = 0
 
-    const final = await stream.finalMessage()
+    // Boucle tool-use : on stream, et tant que le modèle demande un tool on
+    // l'exécute via l'allowlist, on renvoie les tool_result, et on re-stream.
+    for (;;) {
+      const stream = client.messages.stream(
+        { ...basePayload, messages: convo },
+        { signal: abort.signal },
+      )
+
+      stream.on('text', (delta) => {
+        if (!delta) return
+        sseWrite(res, { type: 'text', text: delta })
+      })
+
+      final = await stream.finalMessage()
+
+      if (final.stop_reason !== 'tool_use') break
+      // Cap atteint : stop forcé, on n'exécute pas les tools de ce tour.
+      if (iterations >= MAX_TOOL_ITERATIONS) break
+      iterations++
+
+      // L'assistant a produit un (ou plusieurs) bloc(s) tool_use : on les
+      // rejoue à l'identique dans la conversation, puis on append les résultats.
+      convo.push({ role: 'assistant', content: final.content })
+
+      const toolResults: Anthropic.ToolResultBlockParam[] = []
+      for (const block of final.content) {
+        if (block.type !== 'tool_use') continue
+        // Event SSE non bloquant : le front peut afficher « écriture en cours… ».
+        sseWrite(res, { type: 'tool', name: block.name })
+        const result = await runTool(block.name, block.input)
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: result.content,
+          is_error: result.isError,
+        })
+      }
+      convo.push({ role: 'user', content: toolResults })
+    }
 
     sseWrite(res, {
       type: 'done',

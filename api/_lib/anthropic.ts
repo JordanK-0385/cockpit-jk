@@ -1,3 +1,5 @@
+import type Anthropic from '@anthropic-ai/sdk'
+
 export type ClientMessage = {
   role: 'user' | 'assistant'
   content: string
@@ -8,6 +10,7 @@ export type AnthropicPayload = {
   max_tokens: number
   system: string
   messages: { role: 'user' | 'assistant'; content: string }[]
+  tools?: Anthropic.Tool[]
 }
 
 export const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5'
@@ -27,12 +30,14 @@ export const SYSTEM_PROMPT = `Tu es le collaborateur IA de Jordan Koskas, consul
  */
 export function buildAnthropicPayload(
   messages: ClientMessage[],
-  opts: { model?: string; maxTokens?: number; system?: string } = {},
+  opts: { model?: string; maxTokens?: number; system?: string; tools?: Anthropic.Tool[] } = {},
 ): AnthropicPayload {
-  return {
+  const payload: AnthropicPayload = {
     model: opts.model ?? MODEL,
     max_tokens: opts.maxTokens ?? MAX_TOKENS,
     system: opts.system ?? SYSTEM_PROMPT,
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   }
+  if (opts.tools && opts.tools.length > 0) payload.tools = opts.tools
+  return payload
 }
