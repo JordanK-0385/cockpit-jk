@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Cockpit JK — règles de sécurité Firestore (Sprint 2 étape 3).
+//
+// ⚠️ NON DÉPLOYÉ PAR CETTE PR. À déployer manuellement par Jordan via
+//    `firebase deploy --only firestore:rules` (ou la console Firebase).
+//
+// Principe : deny par défaut. Le seul accès autorisé est celui de
+// l'utilisateur unique du cockpit à SA propre sous-collection de messages :
+//   - request.auth != null                         (authentifié)
+//   - request.auth.uid == uid                       (ses propres documents)
+//   - request.auth.token.email == AUTHORIZED_EMAIL  (le seul compte autorisé)
+//
+// L'e-mail doit rester aligné avec VITE_AUTHORIZED_EMAIL (front) et l'e-mail
+// autorisé côté /api/*.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthorizedUser(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email == 'jordan.koskas@gmail.com';
+    }
+
+    // Historique de chat : users/{uid}/messages/{messageId}
+    match /users/{uid}/messages/{messageId} {
+      allow read, write: if isAuthorizedUser(uid);
+    }
+
+    // Tout le reste : refusé par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -15,13 +15,23 @@ export type Msg =
   | { id: string; role: 'suggestion'; text: string }
 
 /**
+ * Cost guardrail (Sprint 2 étape 3). With history now persisted across
+ * reloads, an unbounded conversation would re-bill every prior turn on
+ * each new message. The UI keeps the full transcript; only the API
+ * payload is capped to the last MAX_TURNS turns (≈ user+assistant pairs).
+ */
+export const MAX_TURNS = 20
+
+/**
  * Build the Anthropic-bound payload from the UI state + the new user
- * text. Three guarantees:
+ * text. Four guarantees:
  *   1. Suggestion bubbles and synthetic Claude messages (greeting,
  *      placeholders) are excluded — they're UI artifacts only.
  *   2. Empty Claude messages (streaming placeholders that never got
  *      any text) are dropped.
- *   3. The result always starts with a user message — defensive strip
+ *   3. Only the last MAX_TURNS turns are sent (cost cap) — older history
+ *      is dropped from the payload but stays on screen.
+ *   4. The result always starts with a user message — defensive strip
  *      of any leading assistant turn, since the Anthropic API rejects
  *      conversations that don't begin with `user`.
  */
@@ -36,8 +46,12 @@ export function buildApiMessages(uiMessages: Msg[], newUserText: string): ChatMe
       content: m.text,
     })
   }
-  while (history.length > 0 && history[0].role !== 'user') {
-    history.shift()
+  // Cap to the last MAX_TURNS turns. A turn ≈ a user+assistant pair, so we
+  // keep at most MAX_TURNS*2 messages. The slice can land on a leading
+  // assistant turn, so the defensive strip below still applies afterwards.
+  const capped = history.slice(-MAX_TURNS * 2)
+  while (capped.length > 0 && capped[0].role !== 'user') {
+    capped.shift()
   }
-  return [...history, { role: 'user', content: newUserText }]
+  return [...capped, { role: 'user', content: newUserText }]
 }
