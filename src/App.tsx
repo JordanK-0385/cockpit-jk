@@ -3,6 +3,7 @@ import { useAuth } from './lib/auth'
 import { Login } from './pages/Login'
 import { Cockpit } from './pages/Cockpit'
 import { RadarProjets } from './pages/RadarProjets'
+import { Apprendre } from './pages/Apprendre'
 import { AmbientLayer } from './components/ambient/AmbientLayer'
 import { Loader } from './components/ui/Loader'
 
@@ -28,6 +29,10 @@ export default function App() {
             <Route
               path="/radar"
               element={authorized ? <RadarProjets /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/apprendre"
+              element={authorized ? <Apprendre /> : <Navigate to="/login" replace />}
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
