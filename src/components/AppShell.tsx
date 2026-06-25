@@ -1,12 +1,19 @@
 import { type ReactNode } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Sparkles, Cloud, LogOut } from 'lucide-react'
+import { Sparkles, Cloud, LogOut, LayoutGrid, Radar } from 'lucide-react'
 import { GlassPill } from '@/components/ui/GlassPill'
 import { LiveClock } from '@/components/LiveClock'
 import { PerformanceToggle } from '@/components/PerformanceToggle'
 import { logout } from '@/lib/firebase'
 import { useAuth } from '@/lib/auth'
+import { NavLink } from 'react-router-dom'
+import { cn } from '@/lib/utils'
+
+const MODULES = [
+  { id: 'cockpit', label: 'Cockpit', icon: LayoutGrid, path: '/' },
+  { id: 'radar', label: 'Radar Projets', icon: Radar, path: '/radar' },
+] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
   // Date label is computed once per mount — it doesn't tick. Crossing
@@ -34,6 +41,27 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="eyebrow">{dateLabel}</span>
           </div>
         </div>
+
+        <nav className="hidden md:flex items-center gap-1.5">
+          {MODULES.map((m) => (
+            <NavLink
+              key={m.id}
+              to={m.path}
+              end
+              className={({ isActive }) =>
+                cn(
+                  'inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs transition-colors',
+                  isActive
+                    ? 'bg-sage/15 border-sage/30 text-sage-light'
+                    : 'bg-glass-7 border-glass-10 text-muted hover:text-cream-50',
+                )
+              }
+            >
+              <m.icon className="h-3.5 w-3.5" />
+              <span>{m.label}</span>
+            </NavLink>
+          ))}
+        </nav>
 
         <div className="flex items-center gap-3">
           <GlassPill tone="glacier" className="hidden md:inline-flex">
