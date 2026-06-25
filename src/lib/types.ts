@@ -16,6 +16,11 @@ export type ProjetFields = {
   'Notes management'?: string
   'Client'?: string
   'Technos'?: string
+  // Champs additionnels exploités par le Radar Projets (lecture seule).
+  'Processus métier impacté'?: string
+  'Technos utilisées'?: string[]
+  'Date de début'?: string
+  'Tâches'?: string[] // multipleRecordLinks → record IDs des tâches liées
 }
 
 export type TacheStatut = '🎯 À faire' | '🚧 En cours' | '✅ Terminé'
@@ -31,6 +36,14 @@ export type TacheFields = {
   'Date cible'?: string
   'Bloquant'?: boolean
   'Projet parent'?: string[]
+  'Sous-tâches'?: string[] // multipleRecordLinks → record IDs des sous-tâches
+}
+
+export type SousTacheFields = {
+  'Action': string
+  'Fait'?: boolean
+  'Notes'?: string
+  'Tâche parente'?: string[] // multipleRecordLinks → record IDs des tâches
 }
 
 export type SessionType = 'Check-in' | 'Check-out' | 'Session libre'
@@ -57,5 +70,6 @@ export type AirtableRecord<F> = {
 export const TABLES = {
   Projets: 'Projets IA & Automatisation',
   Taches: 'Tâches',
+  SousTaches: 'Sous-tâches',
   Sessions: 'Sessions Claude',
 } as const
