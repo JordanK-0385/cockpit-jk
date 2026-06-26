@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Check, X, ChevronRight, Trophy, PenLine, AlertCircle, BookOpen } from 'lucide-react'
+import { Check, X, ChevronRight, PenLine, AlertCircle, Lightbulb, BookOpen, Network } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlossaryText } from '@/components/apprendre/GlossaryText'
+import { SchemaDiagram } from '@/components/apprendre/SchemaDiagram'
+import { ScoreRing } from '@/components/apprendre/ScoreRing'
 import { cn } from '@/lib/utils'
 import { pct } from '@/lib/quiz-stats'
-import type { QuizQuestion, GlossaryItem } from '@/lib/quiz'
+import type { QuizQuestion, GlossaryItem, FicheSchema } from '@/lib/quiz'
 
 type Phase = 'running' | 'result'
 
@@ -14,6 +16,7 @@ export function QuizRunner({
   questions,
   glossaire,
   enseignements,
+  schema,
   sujet,
   onSave,
   onReplay,
@@ -26,6 +29,7 @@ export function QuizRunner({
   questions: QuizQuestion[]
   glossaire: GlossaryItem[]
   enseignements: string[]
+  schema: FicheSchema | null
   sujet: string
   onSave: (score: number, trace: string) => void
   onReplay: () => void
@@ -52,12 +56,10 @@ export function QuizRunner({
     if (validated) return
     setSelected(i)
   }
-
   function validate() {
     if (selected === null) return
     setValidated(true)
   }
-
   function next() {
     if (!validated || selected === null) return
     setAnswers((prev) => [...prev, selected])
@@ -68,38 +70,65 @@ export function QuizRunner({
   }
 
   if (phase === 'result') {
-    const tone = scorePct >= 80 ? 'sage' : scorePct >= 50 ? 'glacier' : 'terracotta'
     return (
       <div className="space-y-5 max-w-3xl">
-        <GlassCard depth="l3" tone={tone} className="p-6" hoverable={false}>
-          <div className="flex items-center gap-3">
-            <Trophy className="h-6 w-6 text-sage" />
-            <div>
-              <h3 className="text-lg font-semibold text-cream-50">
-                {score}/{total} · {scorePct}%
-              </h3>
-              <span className="eyebrow">{sujet}</span>
-            </div>
+        {/* En-tête score */}
+        <GlassCard depth="l3" tone="neutral" className="p-5 flex items-center gap-4" hoverable={false}>
+          <ScoreRing pct={scorePct} size={60} />
+          <div>
+            <h3 className="text-lg font-semibold text-cream-50 leading-tight">
+              {score}/{total} · {scorePct}%
+            </h3>
+            <span className="eyebrow">{sujet}</span>
           </div>
         </GlassCard>
 
-        {/* Fiche — enseignements à retenir */}
-        {enseignements.length > 0 && (
+        {/* Schéma */}
+        {schema && (
           <GlassCard depth="l3" tone="glacier" className="p-5" hoverable={false}>
             <div className="flex items-center gap-2 mb-3">
-              <BookOpen className="h-3.5 w-3.5 text-glacier" />
-              <span className="eyebrow">À retenir · fiche</span>
+              <Network className="h-3.5 w-3.5 text-glacier" />
+              <span className="eyebrow">Schéma</span>
             </div>
-            <ul className="space-y-2">
+            <SchemaDiagram schema={schema} />
+          </GlassCard>
+        )}
+
+        {/* À retenir — cartes-idées */}
+        {enseignements.length > 0 && (
+          <GlassCard depth="l3" tone="sage" className="p-5" hoverable={false}>
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="h-3.5 w-3.5 text-sage" />
+              <span className="eyebrow">À retenir</span>
+            </div>
+            <div className="space-y-1.5">
               {enseignements.map((e, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-cream-50">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-glacier" />
-                  <span className="leading-relaxed">
+                <div key={i} className="flex items-start gap-2.5 rounded-lg bg-sage/[0.08] border-l-2 border-sage/50 px-3 py-2">
+                  <span className="text-xs font-medium text-sage-light shrink-0 mt-0.5">{i + 1}</span>
+                  <span className="text-[13px] text-cream-100 leading-snug">
                     <GlossaryText text={e} glossaire={glossaire} />
                   </span>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Glossaire — flashcards */}
+        {glossaire.length > 0 && (
+          <GlassCard depth="l3" tone="neutral" className="p-5" hoverable={false}>
+            <div className="flex items-center gap-2 mb-3">
+              <BookOpen className="h-3.5 w-3.5 text-glacier" />
+              <span className="eyebrow">Glossaire</span>
+            </div>
+            <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+              {glossaire.map((g, i) => (
+                <div key={i} className="rounded-xl bg-glass-5 border border-glass-10 px-3 py-2.5">
+                  <GlassBadge tone="glacier">{g.terme}</GlassBadge>
+                  <p className="text-[12px] text-muted mt-1.5 leading-snug">{g.definition}</p>
+                </div>
+              ))}
+            </div>
           </GlassCard>
         )}
 
@@ -136,14 +165,14 @@ export function QuizRunner({
           })}
         </div>
 
-        {/* Trace — méthode JK 4 temps : la session produit un livrable */}
-        <GlassCard depth="l3" tone="sage" className="p-5" hoverable={false}>
+        {/* Trace */}
+        <GlassCard depth="l3" tone="terracotta" className="p-5" hoverable={false}>
           <div className="flex items-center gap-2 mb-2">
-            <PenLine className="h-3.5 w-3.5 text-sage" />
+            <PenLine className="h-3.5 w-3.5 text-terracotta" />
             <span className="eyebrow">Ta trace · 1 chose à retenir</span>
           </div>
           <p className="text-xs text-muted mb-3">
-            La fiche (enseignements + glossaire) et ta note seront enregistrées dans « Mes fiches » pour réviser.
+            La fiche (schéma + enseignements + glossaire) et ta note seront enregistrées dans « Mes fiches » pour réviser.
           </p>
           <textarea
             value={trace}
@@ -167,7 +196,7 @@ export function QuizRunner({
             </div>
           )}
 
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
             {saved ? (
               <GlassBadge tone="sage" className="gap-1">
                 <Check className="h-3 w-3" /> Fiche enregistrée
@@ -222,10 +251,8 @@ export function QuizRunner({
                 disabled={revealed}
                 className={cn(
                   'w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors flex items-center justify-between gap-3',
-                  // Avant validation : surbrillance de la sélection, sans révéler.
                   !revealed && isPicked && 'bg-sage/15 border-sage/40 text-cream-50',
                   !revealed && !isPicked && 'bg-glass-7 border-glass-10 text-cream-50 hover:bg-glass-10',
-                  // Après validation : on révèle.
                   revealed && isCorrect && 'bg-sage/15 border-sage/40 text-sage-light',
                   revealed && isPicked && !isCorrect && 'bg-terracotta/15 border-terracotta/40 text-terracotta-light',
                   revealed && !isCorrect && !isPicked && 'bg-glass-7 border-glass-10 text-muted',

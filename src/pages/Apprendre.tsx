@@ -11,8 +11,7 @@ import { FichesView } from '@/components/apprendre/FichesView'
 import { useSujets, type Sujet } from '@/lib/apprentissage'
 import { generateQuiz, type QuizPayload } from '@/lib/quiz'
 import { saveAttempt, loadAttempts } from '@/lib/quiz-store'
-import { createFiche } from '@/lib/fiches'
-import { useFiches } from '@/lib/fiches'
+import { createFiche, useFiches, type Fiche } from '@/lib/fiches'
 import { pct, type QuizAttempt } from '@/lib/quiz-stats'
 import { useAuth } from '@/lib/auth'
 import { cn, logger } from '@/lib/utils'
@@ -62,12 +61,14 @@ export function Apprendre() {
     setNiveau(s.niveau || 'Intermédiaire')
   }
 
-  async function startQuiz() {
-    if (!selected || genLoading) return
+  async function startQuiz(target?: Sujet, lvl?: string) {
+    const sujet = target ?? selected
+    const niv = lvl ?? niveau
+    if (!sujet || genLoading) return
     setGenError(null)
     setGenLoading(true)
     try {
-      const p = await generateQuiz({ sujet: selected.theme, niveau, angle: selected.angle })
+      const p = await generateQuiz({ sujet: sujet.theme, niveau: niv, angle: sujet.angle })
       setPayload(p)
       setSaved(false)
       setSaveError(null)
@@ -81,6 +82,27 @@ export function Apprendre() {
     }
   }
 
+  // Lancer un entraînement depuis une fiche (vue Mes fiches).
+  function trainFromFiche(f: Fiche) {
+    const match = sujets.find((s) => s.theme === f.sujet)
+    const target: Sujet =
+      match ?? {
+        id: '',
+        theme: f.sujet,
+        domaine: f.domaine,
+        niveau: f.niveau || 'Intermédiaire',
+        angle: '',
+        source: '',
+        referentiels: [],
+        priorite: '',
+      }
+    const niv = f.niveau || target.niveau || 'Intermédiaire'
+    setTab('train')
+    setSelected(target)
+    setNiveau(niv)
+    void startQuiz(target, niv)
+  }
+
   async function handleSave(score: number, trace: string) {
     if (!user || !selected || !payload || saving) return
     setSaving(true)
@@ -89,7 +111,6 @@ export function Apprendre() {
     const total = payload.questions.length
     const percentage = pct(score, total)
 
-    // Fiche Airtable (révision durable) — c'est le livrable principal.
     let ficheOk = false
     try {
       await createFiche({
@@ -102,6 +123,7 @@ export function Apprendre() {
         enseignements: payload.enseignements,
         glossaire: payload.glossaire,
         trace,
+        schema: payload.schema,
       })
       ficheOk = true
     } catch (err) {
@@ -109,8 +131,6 @@ export function Apprendre() {
       setSaveError(err instanceof Error ? err.message : 'Enregistrement de la fiche impossible')
     }
 
-    // Score Firestore (progression) — best-effort : nécessite les règles
-    // déployées. Un échec ici ne doit pas masquer la fiche enregistrée.
     try {
       await saveAttempt(user.uid, {
         sujetId: selected.id,
@@ -155,7 +175,6 @@ export function Apprendre() {
   return (
     <AppShell>
       <div className="col-scroll px-6 py-6 max-w-[1400px] mx-auto w-full">
-        {/* Titre + onglets internes */}
         <div className="flex items-center justify-between gap-4 mb-5 flex-wrap">
           <div className="flex items-center gap-2.5">
             <span className="text-sage">
@@ -189,7 +208,7 @@ export function Apprendre() {
         </div>
 
         {tab === 'fiches' ? (
-          <FichesView fiches={fiches} loading={fichesLoading} error={fichesError} />
+          <FichesView fiches={fiches} loading={fichesLoading} error={fichesError} onTrain={trainFromFiche} />
         ) : (
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <div>
@@ -262,6 +281,7 @@ export function Apprendre() {
                   questions={payload.questions}
                   glossaire={payload.glossaire}
                   enseignements={payload.enseignements}
+                  schema={payload.schema}
                   sujet={selected.theme}
                   onSave={(score, trace) => void handleSave(score, trace)}
                   onReplay={() => void startQuiz()}

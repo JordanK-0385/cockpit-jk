@@ -83,6 +83,7 @@ export type FicheFields = {
   'Enseignements'?: string
   'Glossaire'?: string
   'Trace'?: string
+  'Schema'?: string
   'Source'?: string
 }
 
