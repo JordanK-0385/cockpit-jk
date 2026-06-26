@@ -70,6 +70,7 @@ export type SujetApprentissageFields = {
   'Référentiels'?: string[]
   'Priorité'?: string
   'Statut'?: string
+  'Ordre'?: number
 }
 
 export type FicheFields = {

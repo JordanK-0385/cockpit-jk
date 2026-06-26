@@ -17,6 +17,7 @@ export const SUJETS_FIELD_MAP = {
   referentiels: 'Référentiels',
   priorite: 'Priorité',
   statut: 'Statut',
+  ordre: 'Ordre',
 } as const
 
 export type Sujet = {
@@ -28,18 +29,10 @@ export type Sujet = {
   source: string
   referentiels: string[]
   priorite: string
+  ordre: number
 }
 
 const FIVE_MIN = 5 * 60 * 1000
-
-// Poids de priorité pour ordonner les sujets (plus petit = plus urgent).
-function priorityWeight(priorite: string): number {
-  const p = priorite.toLowerCase()
-  if (p.includes('haute')) return 0
-  if (p.includes('moyenne')) return 1
-  if (p.includes('basse')) return 2
-  return 1
-}
 
 /** Hook : sujets « Actif » de la table, triés par priorité décroissante. */
 export function useSujets() {
@@ -63,8 +56,9 @@ export function useSujets() {
       source: r.fields[SUJETS_FIELD_MAP.source] ?? '',
       referentiels: r.fields[SUJETS_FIELD_MAP.referentiels] ?? [],
       priorite: r.fields[SUJETS_FIELD_MAP.priorite] ?? '',
+      ordre: r.fields[SUJETS_FIELD_MAP.ordre] ?? 0,
     }))
-    .sort((a, b) => priorityWeight(a.priorite) - priorityWeight(b.priorite))
+    .sort((a, b) => a.ordre - b.ordre)
 
   return {
     sujets,
