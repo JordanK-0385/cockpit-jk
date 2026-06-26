@@ -14,12 +14,13 @@ const TONES: Record<'sage' | 'glacier' | 'terracotta', DomaineTone> = {
 }
 
 const MAP: Record<string, keyof typeof TONES> = {
-  'Sécurité & Conformité IA': 'terracotta',
-  'Concepts & Acronymes': 'glacier',
-  'NLP / ML / DL': 'sage',
-  'Automatisation & RPA': 'glacier',
-  'Évaluation & Métriques': 'terracotta',
-  'Outils & Librairies': 'sage',
+  Fondamentaux: 'sage',
+  LLM: 'glacier',
+  Algorithme: 'sage',
+  Data: 'glacier',
+  Tools: 'sage',
+  Sécurité: 'terracotta',
+  Conformité: 'terracotta',
 }
 
 function hashTone(s: string): keyof typeof TONES {
