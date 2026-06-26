@@ -7,8 +7,10 @@ import {
   clampCount,
   normalizeGlossary,
   normalizeStringList,
+  normalizeSchema,
   DEFAULT_QUESTION_COUNT,
   MAX_QUESTION_COUNT,
+  QUIZ_SYSTEM_PROMPT,
 } from '../../api/_lib/quiz'
 
 const valid = {
@@ -28,6 +30,7 @@ const valid = {
   ],
   glossaire: [{ terme: 'NLU', definition: 'Natural Language Understanding : compréhension.' }],
   enseignements: ['Un bon distracteur est plausible.', "L'art. 28 cadre la sous-traitance."],
+  schema: { kind: 'umbrella', nodes: [{ label: 'NLP', sub: 'parapluie' }, { label: 'NLU' }] },
 }
 const validJson = JSON.stringify(valid)
 
@@ -88,6 +91,42 @@ describe('normalizeStringList', () => {
   })
 })
 
+describe('normalizeSchema', () => {
+  it('accepte un kind valide avec >= 2 nodes', () => {
+    const s = normalizeSchema({ kind: 'flow', nodes: [{ label: 'A' }, { label: 'B' }] })
+    expect(s).not.toBeNull()
+    expect(s!.kind).toBe('flow')
+    expect(s!.nodes).toHaveLength(2)
+  })
+  it('rejette un kind inconnu', () => {
+    expect(normalizeSchema({ kind: 'pie', nodes: [{ label: 'A' }, { label: 'B' }] })).toBeNull()
+  })
+  it('rejette moins de 2 nodes', () => {
+    expect(normalizeSchema({ kind: 'flow', nodes: [{ label: 'A' }] })).toBeNull()
+  })
+  it('plafonne à 4 nodes et ignore les labels vides', () => {
+    const s = normalizeSchema({
+      kind: 'compare',
+      nodes: [{ label: 'A' }, { label: '' }, { label: 'B' }, { label: 'C' }, { label: 'D' }, { label: 'E' }],
+    })
+    expect(s!.nodes.length).toBeLessThanOrEqual(4)
+  })
+  it('renvoie null si absent', () => {
+    expect(normalizeSchema(undefined)).toBeNull()
+    expect(normalizeSchema(null)).toBeNull()
+  })
+})
+
+describe('QUIZ_SYSTEM_PROMPT — vulgarisation', () => {
+  it('impose un style simple/imagé et la concision (2 à 3 phrases)', () => {
+    expect(QUIZ_SYSTEM_PROMPT).toMatch(/imag/i)
+    expect(QUIZ_SYSTEM_PROMPT).toContain('2 à 3 phrases')
+  })
+  it('garde la rigueur technique (on ne simplifie pas le fond)', () => {
+    expect(QUIZ_SYSTEM_PROMPT).toMatch(/jamais le fond/i)
+  })
+})
+
 describe('parseQuizResponse', () => {
   it('parse questions + glossaire + enseignements', () => {
     const p = parseQuizResponse(validJson)
@@ -95,6 +134,7 @@ describe('parseQuizResponse', () => {
     expect(p.questions[0].answerIndex).toBe(1)
     expect(p.glossaire[0].terme).toBe('NLU')
     expect(p.enseignements).toHaveLength(2)
+    expect(p.schema?.kind).toBe('umbrella')
   })
   it('tolère un emballage Markdown', () => {
     expect(parseQuizResponse('```json\n' + validJson + '\n```').questions).toHaveLength(2)
@@ -107,6 +147,7 @@ describe('parseQuizResponse', () => {
     const p = parseQuizResponse(minimal)
     expect(p.glossaire).toEqual([])
     expect(p.enseignements).toEqual([])
+    expect(p.schema).toBeNull()
   })
   it('rejette un answerIndex hors limites', () => {
     const bad = JSON.stringify({

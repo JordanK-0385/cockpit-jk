@@ -1,10 +1,6 @@
 import { getIdToken } from './firebase'
 
-/**
- * Module Apprendre — client de l'endpoint /api/claude/quiz (proxy Vercel).
- * Types redéclarés côté front (comme focus.ts) pour ne pas tirer de
- * dépendances serveur dans le bundle client.
- */
+/** Module Apprendre — client de l'endpoint /api/claude/quiz (proxy Vercel). */
 export type QuizQuestion = {
   question: string
   choices: string[]
@@ -17,10 +13,19 @@ export type GlossaryItem = {
   definition: string
 }
 
+export type SchemaKind = 'umbrella' | 'flow' | 'compare' | 'layers'
+export type SchemaNode = { label: string; sub?: string }
+export type FicheSchema = {
+  kind: SchemaKind
+  title?: string
+  nodes: SchemaNode[]
+}
+
 export type QuizPayload = {
   questions: QuizQuestion[]
   glossaire: GlossaryItem[]
   enseignements: string[]
+  schema: FicheSchema | null
 }
 
 export type GenerateQuizInput = {
@@ -54,5 +59,6 @@ export async function generateQuiz(input: GenerateQuizInput): Promise<QuizPayloa
     questions: data.questions,
     glossaire: data.glossaire ?? [],
     enseignements: data.enseignements ?? [],
+    schema: data.schema ?? null,
   }
 }
