@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { GraduationCap, AlertCircle, Map as MapIcon, Library } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { GlassCard } from '@/components/ui/GlassCard'
@@ -7,7 +7,7 @@ import { ParcoursView } from '@/components/apprendre/ParcoursView'
 import { QuizRunner } from '@/components/apprendre/QuizRunner'
 import { FichesView } from '@/components/apprendre/FichesView'
 import { useSujets, type Sujet } from '@/lib/apprentissage'
-import { buildParcours } from '@/lib/parcours'
+import { buildParcours, type Niveau } from '@/lib/parcours'
 import { generateQuiz, type QuizPayload } from '@/lib/quiz'
 import { saveAttempt, loadAttempts } from '@/lib/quiz-store'
 import { createFiche, useFiches, type Fiche } from '@/lib/fiches'
@@ -36,6 +36,8 @@ export function Apprendre() {
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveWarning, setSaveWarning] = useState<string | null>(null)
+  const [celebrate, setCelebrate] = useState<Niveau | null>(null)
+  const prevBadges = useRef<number | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -51,6 +53,19 @@ export function Apprendre() {
   }, [user])
 
   const parcours = useMemo(() => buildParcours(sujets, attempts), [sujets, attempts])
+
+  // Banderole de passage de niveau : déclenchée quand un nouveau badge apparaît.
+  useEffect(() => {
+    const count = parcours.badges.length
+    if (prevBadges.current === null) {
+      prevBadges.current = count
+      return
+    }
+    if (count > prevBadges.current) {
+      setCelebrate(parcours.badges[parcours.badges.length - 1])
+    }
+    prevBadges.current = count
+  }, [parcours.badges])
 
   async function startQuiz(target: Sujet, lvl: string) {
     if (genLoading) return
@@ -161,7 +176,7 @@ export function Apprendre() {
   }
 
   const tabs: { id: Tab; label: string; icon: typeof MapIcon }[] = [
-    { id: 'parcours', label: 'Parcours', icon: MapIcon },
+    { id: 'parcours', label: 'Mon Parcours', icon: MapIcon },
     { id: 'fiches', label: 'Mes fiches', icon: Library },
   ]
 
@@ -251,7 +266,12 @@ export function Apprendre() {
                     <span>{genError}</span>
                   </div>
                 )}
-                <ParcoursView parcours={parcours} onStart={startFromParcours} />
+                <ParcoursView
+                  parcours={parcours}
+                  onStart={startFromParcours}
+                  celebrate={celebrate}
+                  onDismissCelebrate={() => setCelebrate(null)}
+                />
               </>
             )}
           </>
