@@ -27,6 +27,11 @@ service cloud.firestore {
       allow read, write: if isAuthorizedUser(uid);
     }
 
+    // Scores du module Apprendre : users/{uid}/apprentissage_scores/{attemptId}
+    match /users/{uid}/apprentissage_scores/{attemptId} {
+      allow read, write: if isAuthorizedUser(uid);
+    }
+
     // Tout le reste : refusé par défaut.
     match /{document=**} {
       allow read, write: if false;

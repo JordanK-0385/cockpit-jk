@@ -61,6 +61,31 @@ export type SessionFields = {
   'Focus du jour'?: string
 }
 
+export type SujetApprentissageFields = {
+  'Thème': string
+  'Domaine'?: string
+  'Niveau'?: string
+  'Angle pédagogique'?: string
+  'Source'?: string
+  'Référentiels'?: string[]
+  'Priorité'?: string
+  'Statut'?: string
+}
+
+export type FicheFields = {
+  'Titre': string
+  'Sujet'?: string
+  'Domaine'?: string
+  'Date'?: string
+  'Niveau'?: string
+  'Score'?: string
+  'Pourcentage'?: number
+  'Enseignements'?: string
+  'Glossaire'?: string
+  'Trace'?: string
+  'Source'?: string
+}
+
 export type AirtableRecord<F> = {
   id: string
   fields: F
@@ -72,4 +97,6 @@ export const TABLES = {
   Taches: 'Tâches',
   SousTaches: 'Sous-tâches',
   Sessions: 'Sessions Claude',
+  Sujets: "Sujets d'apprentissage",
+  Fiches: "Fiches d'apprentissage",
 } as const
