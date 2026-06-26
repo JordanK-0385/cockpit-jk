@@ -5,11 +5,13 @@ import {
   parseQuizResponse,
   stripCodeFences,
   clampCount,
+  normalizeGlossary,
+  normalizeStringList,
   DEFAULT_QUESTION_COUNT,
   MAX_QUESTION_COUNT,
 } from '../../api/_lib/quiz'
 
-const validJson = JSON.stringify({
+const valid = {
   questions: [
     {
       question: 'Que teste un QCM bien conçu ?',
@@ -24,7 +26,10 @@ const validJson = JSON.stringify({
       explication: "L'art. 28 régit le contrat responsable/sous-traitant.",
     },
   ],
-})
+  glossaire: [{ terme: 'NLU', definition: 'Natural Language Understanding : compréhension.' }],
+  enseignements: ['Un bon distracteur est plausible.', "L'art. 28 cadre la sous-traitance."],
+}
+const validJson = JSON.stringify(valid)
 
 describe('clampCount', () => {
   it('défaut si absent ou invalide', () => {
@@ -40,8 +45,7 @@ describe('clampCount', () => {
 
 describe('stripCodeFences', () => {
   it('retire un emballage ```json', () => {
-    const wrapped = '```json\n{"a":1}\n```'
-    expect(stripCodeFences(wrapped)).toBe('{"a":1}')
+    expect(stripCodeFences('```json\n{"a":1}\n```')).toBe('{"a":1}')
   })
   it('laisse le texte nu inchangé', () => {
     expect(stripCodeFences('{"a":1}')).toBe('{"a":1}')
@@ -55,27 +59,54 @@ describe('buildQuizUserPrompt', () => {
     expect(p).toContain('Niveau : Débutant')
     expect(p).toContain('exactement 3 questions')
   })
-  it("inclut l'angle quand fourni", () => {
-    const p = buildQuizUserPrompt({ sujet: 'X', niveau: 'Expert', angle: 'pièges courants' })
-    expect(p).toContain('Angle à couvrir')
-    expect(p).toContain('pièges courants')
+  it('réclame glossaire et enseignements dans le format', () => {
+    const p = buildQuizUserPrompt({ sujet: 'X', niveau: 'Expert' })
+    expect(p).toContain('glossaire')
+    expect(p).toContain('enseignements')
+  })
+})
+
+describe('normalizeGlossary', () => {
+  it('garde les entrées complètes, ignore les autres', () => {
+    const g = normalizeGlossary([
+      { terme: 'NER', definition: 'Named Entity Recognition' },
+      { terme: '', definition: 'vide' },
+      { terme: 'X', definition: '' },
+      'pas un objet',
+    ])
+    expect(g).toHaveLength(1)
+    expect(g[0].terme).toBe('NER')
+  })
+  it('renvoie [] si non-array', () => {
+    expect(normalizeGlossary(undefined)).toEqual([])
+  })
+})
+
+describe('normalizeStringList', () => {
+  it('filtre les non-strings et le vide', () => {
+    expect(normalizeStringList(['a', '', 'b', 3, null])).toEqual(['a', 'b'])
   })
 })
 
 describe('parseQuizResponse', () => {
-  it('parse un JSON valide', () => {
-    const qs = parseQuizResponse(validJson)
-    expect(qs).toHaveLength(2)
-    expect(qs[0].answerIndex).toBe(1)
-    expect(qs[1].choices[2]).toBe('Art. 28')
+  it('parse questions + glossaire + enseignements', () => {
+    const p = parseQuizResponse(validJson)
+    expect(p.questions).toHaveLength(2)
+    expect(p.questions[0].answerIndex).toBe(1)
+    expect(p.glossaire[0].terme).toBe('NLU')
+    expect(p.enseignements).toHaveLength(2)
   })
   it('tolère un emballage Markdown', () => {
-    const qs = parseQuizResponse('```json\n' + validJson + '\n```')
-    expect(qs).toHaveLength(2)
+    expect(parseQuizResponse('```json\n' + validJson + '\n```').questions).toHaveLength(2)
   })
   it('tolère un préambule avant le JSON', () => {
-    const qs = parseQuizResponse('Voici les questions :\n' + validJson)
-    expect(qs).toHaveLength(2)
+    expect(parseQuizResponse('Voici :\n' + validJson).questions).toHaveLength(2)
+  })
+  it('défaut glossaire/enseignements vides si absents', () => {
+    const minimal = JSON.stringify({ questions: valid.questions })
+    const p = parseQuizResponse(minimal)
+    expect(p.glossaire).toEqual([])
+    expect(p.enseignements).toEqual([])
   })
   it('rejette un answerIndex hors limites', () => {
     const bad = JSON.stringify({

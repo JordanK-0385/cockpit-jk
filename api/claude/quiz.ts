@@ -13,8 +13,8 @@ import {
 /**
  * Module Apprendre — génération de QCM à la volée (one-shot, non-streaming).
  *
- * Le client envoie { sujet, niveau, angle?, n? }. On demande à Sonnet n QCM
- * et on renvoie { questions: QuizQuestion[] }. Même garde-fou que les autres
+ * Le client envoie { sujet, niveau, angle?, n? }. On renvoie
+ * { questions, glossaire, enseignements }. Même garde-fou que les autres
  * routes : token Firebase dont l'email == AUTHORIZED_EMAIL ; clé Anthropic
  * jamais exposée au front.
  */
@@ -61,15 +61,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .join('')
       .trim()
 
-    let questions
+    let payload
     try {
-      questions = parseQuizResponse(text)
+      payload = parseQuizResponse(text)
     } catch (parseErr) {
       const detail = parseErr instanceof Error ? parseErr.message : String(parseErr)
       res.status(502).json({ error: `Quiz illisible : ${detail}` })
       return
     }
-    res.status(200).json({ questions })
+    res.status(200).json(payload)
   } catch (err) {
     const message =
       err instanceof Anthropic.APIError

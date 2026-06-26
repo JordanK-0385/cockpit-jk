@@ -1,34 +1,44 @@
 import { useState } from 'react'
-import { Check, X, ChevronRight, Trophy, PenLine } from 'lucide-react'
+import { Check, X, ChevronRight, Trophy, PenLine, AlertCircle, BookOpen } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { GlossaryText } from '@/components/apprendre/GlossaryText'
 import { cn } from '@/lib/utils'
 import { pct } from '@/lib/quiz-stats'
-import type { QuizQuestion } from '@/lib/quiz'
+import type { QuizQuestion, GlossaryItem } from '@/lib/quiz'
 
 type Phase = 'running' | 'result'
 
 export function QuizRunner({
   questions,
+  glossaire,
+  enseignements,
   sujet,
   onSave,
   onReplay,
   onExit,
   saving,
   saved,
+  saveError,
+  saveWarning,
 }: {
   questions: QuizQuestion[]
+  glossaire: GlossaryItem[]
+  enseignements: string[]
   sujet: string
   onSave: (score: number, trace: string) => void
   onReplay: () => void
   onExit: () => void
   saving: boolean
   saved: boolean
+  saveError: string | null
+  saveWarning: string | null
 }) {
   const [phase, setPhase] = useState<Phase>('running')
   const [index, setIndex] = useState(0)
-  const [picked, setPicked] = useState<number | null>(null)
+  const [selected, setSelected] = useState<number | null>(null)
+  const [validated, setValidated] = useState(false)
   const [answers, setAnswers] = useState<number[]>([])
   const [trace, setTrace] = useState('')
 
@@ -39,20 +49,22 @@ export function QuizRunner({
   const scorePct = pct(score, total)
 
   function choose(i: number) {
-    if (picked !== null) return
-    setPicked(i)
+    if (validated) return
+    setSelected(i)
+  }
+
+  function validate() {
+    if (selected === null) return
+    setValidated(true)
   }
 
   function next() {
-    if (picked === null) return
-    const nextAnswers = [...answers, picked]
-    setAnswers(nextAnswers)
-    setPicked(null)
-    if (isLast) {
-      setPhase('result')
-    } else {
-      setIndex((n) => n + 1)
-    }
+    if (!validated || selected === null) return
+    setAnswers((prev) => [...prev, selected])
+    setSelected(null)
+    setValidated(false)
+    if (isLast) setPhase('result')
+    else setIndex((n) => n + 1)
   }
 
   if (phase === 'result') {
@@ -71,6 +83,26 @@ export function QuizRunner({
           </div>
         </GlassCard>
 
+        {/* Fiche — enseignements à retenir */}
+        {enseignements.length > 0 && (
+          <GlassCard depth="l3" tone="glacier" className="p-5" hoverable={false}>
+            <div className="flex items-center gap-2 mb-3">
+              <BookOpen className="h-3.5 w-3.5 text-glacier" />
+              <span className="eyebrow">À retenir · fiche</span>
+            </div>
+            <ul className="space-y-2">
+              {enseignements.map((e, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-cream-50">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-glacier" />
+                  <span className="leading-relaxed">
+                    <GlossaryText text={e} glossaire={glossaire} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
+        )}
+
         {/* Revue question par question */}
         <div className="space-y-3">
           {questions.map((qq, i) => {
@@ -83,7 +115,9 @@ export function QuizRunner({
                     {ok ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-cream-50">{qq.question}</p>
+                    <p className="text-sm font-medium text-cream-50">
+                      <GlossaryText text={qq.question} glossaire={glossaire} />
+                    </p>
                     {!ok && (
                       <p className="mt-1 text-xs text-muted">
                         Ta réponse : <span className="text-terracotta-light">{qq.choices[given]}</span> ·
@@ -91,7 +125,9 @@ export function QuizRunner({
                       </p>
                     )}
                     {qq.explication && (
-                      <p className="mt-1.5 text-xs text-muted leading-relaxed">{qq.explication}</p>
+                      <p className="mt-1.5 text-xs text-muted leading-relaxed">
+                        <GlossaryText text={qq.explication} glossaire={glossaire} />
+                      </p>
                     )}
                   </div>
                 </div>
@@ -107,7 +143,7 @@ export function QuizRunner({
             <span className="eyebrow">Ta trace · 1 chose à retenir</span>
           </div>
           <p className="text-xs text-muted mb-3">
-            Apprentissage = livrable. Note le surlignage, le piège ou la règle que tu retiens — pas «&nbsp;c'est intéressant&nbsp;».
+            La fiche (enseignements + glossaire) et ta note seront enregistrées dans « Mes fiches » pour réviser.
           </p>
           <textarea
             value={trace}
@@ -117,10 +153,24 @@ export function QuizRunner({
             disabled={saved}
             className="w-full px-4 py-3 rounded-xl bg-glass-7 border border-glass-10 text-cream-50 placeholder:text-muted-deeper focus:outline-none focus:border-sage/40 focus:bg-glass-10 transition-colors text-sm resize-y disabled:opacity-60"
           />
+
+          {saveError && (
+            <div className="mt-3 flex items-start gap-2 text-xs text-terracotta-light">
+              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>{saveError}</span>
+            </div>
+          )}
+          {saved && saveWarning && (
+            <div className="mt-3 flex items-start gap-2 text-xs text-glacier-light">
+              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>{saveWarning}</span>
+            </div>
+          )}
+
           <div className="mt-3 flex items-center gap-2">
             {saved ? (
               <GlassBadge tone="sage" className="gap-1">
-                <Check className="h-3 w-3" /> Session enregistrée
+                <Check className="h-3 w-3" /> Fiche enregistrée
               </GlassBadge>
             ) : (
               <GlassButton variant="sage" onClick={() => onSave(score, trace.trim())} loading={saving}>
@@ -140,6 +190,7 @@ export function QuizRunner({
   }
 
   // Phase running
+  const revealed = validated
   return (
     <div className="space-y-4 max-w-3xl">
       <div className="flex items-center justify-between">
@@ -157,12 +208,13 @@ export function QuizRunner({
       </div>
 
       <GlassCard depth="l3" tone="neutral" className="p-6" hoverable={false}>
-        <p className="text-base font-medium text-cream-50 leading-snug mb-4">{q.question}</p>
+        <p className="text-base font-medium text-cream-50 leading-snug mb-4">
+          <GlossaryText text={q.question} glossaire={glossaire} />
+        </p>
         <div className="space-y-2">
           {q.choices.map((c, i) => {
-            const revealed = picked !== null
             const isCorrect = i === q.answerIndex
-            const isPicked = i === picked
+            const isPicked = i === selected
             return (
               <button
                 key={i}
@@ -170,13 +222,17 @@ export function QuizRunner({
                 disabled={revealed}
                 className={cn(
                   'w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors flex items-center justify-between gap-3',
-                  !revealed && 'bg-glass-7 border-glass-10 text-cream-50 hover:bg-glass-10',
+                  // Avant validation : surbrillance de la sélection, sans révéler.
+                  !revealed && isPicked && 'bg-sage/15 border-sage/40 text-cream-50',
+                  !revealed && !isPicked && 'bg-glass-7 border-glass-10 text-cream-50 hover:bg-glass-10',
+                  // Après validation : on révèle.
                   revealed && isCorrect && 'bg-sage/15 border-sage/40 text-sage-light',
                   revealed && isPicked && !isCorrect && 'bg-terracotta/15 border-terracotta/40 text-terracotta-light',
                   revealed && !isCorrect && !isPicked && 'bg-glass-7 border-glass-10 text-muted',
                 )}
               >
                 <span>{c}</span>
+                {!revealed && isPicked && <span className="h-2 w-2 rounded-full bg-sage shrink-0" />}
                 {revealed && isCorrect && <Check className="h-4 w-4 shrink-0" />}
                 {revealed && isPicked && !isCorrect && <X className="h-4 w-4 shrink-0" />}
               </button>
@@ -184,18 +240,26 @@ export function QuizRunner({
           })}
         </div>
 
-        {picked !== null && q.explication && (
+        {revealed && q.explication && (
           <div className="mt-4 p-3.5 rounded-xl bg-glass-7 border border-glass-10">
-            <p className="text-xs text-muted leading-relaxed">{q.explication}</p>
+            <p className="text-xs text-muted leading-relaxed">
+              <GlossaryText text={q.explication} glossaire={glossaire} />
+            </p>
           </div>
         )}
       </GlassCard>
 
       <div className="flex justify-end">
-        <GlassButton variant="sage" onClick={next} disabled={picked === null}>
-          {isLast ? 'Voir le résultat' : 'Suivant'}
-          <ChevronRight className="h-4 w-4" />
-        </GlassButton>
+        {!revealed ? (
+          <GlassButton variant="sage" onClick={validate} disabled={selected === null}>
+            Valider
+          </GlassButton>
+        ) : (
+          <GlassButton variant="sage" onClick={next}>
+            {isLast ? 'Voir le résultat' : 'Suivant'}
+            <ChevronRight className="h-4 w-4" />
+          </GlassButton>
+        )}
       </div>
     </div>
   )

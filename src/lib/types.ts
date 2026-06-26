@@ -72,6 +72,20 @@ export type SujetApprentissageFields = {
   'Statut'?: string
 }
 
+export type FicheFields = {
+  'Titre': string
+  'Sujet'?: string
+  'Domaine'?: string
+  'Date'?: string
+  'Niveau'?: string
+  'Score'?: string
+  'Pourcentage'?: number
+  'Enseignements'?: string
+  'Glossaire'?: string
+  'Trace'?: string
+  'Source'?: string
+}
+
 export type AirtableRecord<F> = {
   id: string
   fields: F
@@ -84,4 +98,5 @@ export const TABLES = {
   SousTaches: 'Sous-tâches',
   Sessions: 'Sessions Claude',
   Sujets: "Sujets d'apprentissage",
+  Fiches: "Fiches d'apprentissage",
 } as const

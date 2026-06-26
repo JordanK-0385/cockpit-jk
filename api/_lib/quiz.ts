@@ -2,19 +2,27 @@
  * Module Apprendre — logique pure de génération/parsing des QCM.
  *
  * Séparé de l'endpoint (api/claude/quiz.ts) pour être testable sans I/O ni
- * appel SDK, sur le même modèle que api/_lib/anthropic.ts. L'endpoint
- * importe ce module ; les tests aussi.
+ * appel SDK, sur le même modèle que api/_lib/anthropic.ts.
  */
 
 export type QuizQuestion = {
-  /** Énoncé de la question. */
   question: string
-  /** Propositions (exactement une correcte). */
   choices: string[]
-  /** Index (0-based) de la bonne proposition dans `choices`. */
   answerIndex: number
-  /** Justification : pourquoi la bonne réponse l'est, et le piège principal. */
   explication: string
+}
+
+/** Terme/acronyme + définition courte, affiché au survol. */
+export type GlossaryItem = {
+  terme: string
+  definition: string
+}
+
+/** Réponse complète de l'endpoint : questions + glossaire + enseignements. */
+export type QuizPayload = {
+  questions: QuizQuestion[]
+  glossaire: GlossaryItem[]
+  enseignements: string[]
 }
 
 export type QuizParams = {
@@ -26,9 +34,8 @@ export type QuizParams = {
 
 // Modèle aligné sur le choix Radar (claude-sonnet-4-6), surchargeable par env.
 export const QUIZ_MODEL = process.env.CLAUDE_QUIZ_MODEL || 'claude-sonnet-4-6'
-// Le prototype était plafonné à 1000 (JSON tronqué → bouton réessayer). Dans le
-// Cockpit on maîtrise l'appel : on monte pour 5 QCM + explications sans troncature.
-export const QUIZ_MAX_TOKENS = 2048
+// Monté pour 5 QCM + explications + glossaire + enseignements, sans troncature.
+export const QUIZ_MAX_TOKENS = 3072
 export const DEFAULT_QUESTION_COUNT = 5
 export const MAX_QUESTION_COUNT = 10
 
@@ -39,6 +46,8 @@ Règles :
 - Les distracteurs sont plausibles : on teste la connaissance réelle, pas la logique d'élimination.
 - L'explication justifie la bonne réponse ET dit pourquoi le piège principal est faux, en 1 à 2 phrases.
 - Calibre la difficulté sur le niveau demandé.
+- glossaire : développe et définis en une phrase chaque acronyme ou terme technique mobilisé (ex. NLU → "Natural Language Understanding : ...").
+- enseignements : 3 à 5 points clés à retenir, formulés comme une fiche de révision.
 Tu réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte autour, sans bloc Markdown.`
 
 /** Construit le message utilisateur (déterministe → testable). */
@@ -50,7 +59,9 @@ export function buildQuizUserPrompt(p: QuizParams): string {
   lines.push(`Génère exactement ${n} questions.`)
   lines.push('Réponds avec ce format JSON STRICT :')
   lines.push(
-    '{"questions":[{"question":"...","choices":["A","B","C","D"],"answerIndex":0,"explication":"..."}]}',
+    '{"questions":[{"question":"...","choices":["A","B","C","D"],"answerIndex":0,"explication":"..."}],' +
+      '"glossaire":[{"terme":"NLU","definition":"Natural Language Understanding : ..."}],' +
+      '"enseignements":["...","..."]}',
   )
   lines.push('"answerIndex" est l\'index (0 à 3) de la bonne proposition dans "choices".')
   return lines.join('\n')
@@ -68,11 +79,12 @@ export function stripCodeFences(raw: string): string {
 }
 
 /**
- * Parse la réponse texte du modèle en QuizQuestion[]. Tolérant à un éventuel
- * préambule : si JSON.parse direct échoue, on extrait le premier objet {...}.
- * Lève une erreur explicite si le JSON est valide mais mal formé.
+ * Parse la réponse texte du modèle en QuizPayload. Tolérant à un préambule :
+ * si JSON.parse direct échoue, on extrait le premier objet {...}. Lève une
+ * erreur explicite si les questions sont absentes ou mal formées. Le glossaire
+ * et les enseignements sont optionnels (défaut []).
  */
-export function parseQuizResponse(raw: string): QuizQuestion[] {
+export function parseQuizResponse(raw: string): QuizPayload {
   const text = stripCodeFences(raw)
   let data: unknown
   try {
@@ -85,11 +97,15 @@ export function parseQuizResponse(raw: string): QuizQuestion[] {
     }
     data = JSON.parse(text.slice(start, end + 1))
   }
-  const questions = (data as { questions?: unknown })?.questions
-  if (!Array.isArray(questions) || questions.length === 0) {
+  const obj = data as { questions?: unknown; glossaire?: unknown; enseignements?: unknown }
+  if (!Array.isArray(obj?.questions) || obj.questions.length === 0) {
     throw new Error('JSON valide mais aucune question trouvée')
   }
-  return questions.map((q, i) => normalizeQuestion(q, i))
+  return {
+    questions: obj.questions.map((q, i) => normalizeQuestion(q, i)),
+    glossaire: normalizeGlossary(obj.glossaire),
+    enseignements: normalizeStringList(obj.enseignements),
+  }
 }
 
 function normalizeQuestion(q: unknown, i: number): QuizQuestion {
@@ -107,4 +123,21 @@ function normalizeQuestion(q: unknown, i: number): QuizQuestion {
     throw new Error(`Question ${i + 1} : answerIndex hors limites`)
   }
   return { question, choices, answerIndex, explication }
+}
+
+export function normalizeGlossary(raw: unknown): GlossaryItem[] {
+  if (!Array.isArray(raw)) return []
+  const out: GlossaryItem[] = []
+  for (const item of raw) {
+    const o = item as Record<string, unknown>
+    const terme = typeof o?.terme === 'string' ? o.terme.trim() : ''
+    const definition = typeof o?.definition === 'string' ? o.definition.trim() : ''
+    if (terme && definition) out.push({ terme, definition })
+  }
+  return out
+}
+
+export function normalizeStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter((s): s is string => typeof s === 'string').map((s) => s.trim()).filter(Boolean)
 }
