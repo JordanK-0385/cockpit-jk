@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Sparkles, Cloud, LogOut, LayoutGrid, Radar, GraduationCap } from 'lucide-react'
+import { Sparkles, Cloud, LogOut, LayoutGrid, Radar, GraduationCap, Activity } from 'lucide-react'
 import { GlassPill } from '@/components/ui/GlassPill'
 import { LiveClock } from '@/components/LiveClock'
 import { PerformanceToggle } from '@/components/PerformanceToggle'
@@ -14,6 +14,7 @@ const MODULES = [
   { id: 'cockpit', label: 'Cockpit', icon: LayoutGrid, path: '/' },
   { id: 'radar', label: 'Radar Projets', icon: Radar, path: '/radar' },
   { id: 'apprendre', label: 'Apprendre', icon: GraduationCap, path: '/apprendre' },
+  { id: 'monitoring', label: 'Monitoring n8n', icon: Activity, path: '/monitoring' },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
