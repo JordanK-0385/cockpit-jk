@@ -95,6 +95,7 @@ export interface N8nMonitoringResponse {
   truncated: boolean // pagination executions bornée
   costTruncated: boolean // récupération includeData bornée (lot B/C)
   fetchedAt: string
+  reviewCache?: N8nReviewCache | null // conseils IA en cache (lots E & F), null si jamais généré
 }
 
 // ════════════════════════════════════════════════════════════════════════

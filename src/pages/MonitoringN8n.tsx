@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Activity, AlertCircle, ArrowDownWideNarrow, CheckCircle2 } from 'lucide-react'
+import { Activity, AlertCircle, ArrowDownWideNarrow, CheckCircle2, Sparkles } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -10,12 +10,16 @@ import { CredentialsBanner } from '@/components/monitoring/CredentialsBanner'
 import { FilterChips } from '@/components/monitoring/FilterChips'
 import { WorkflowCard } from '@/components/monitoring/WorkflowCard'
 import { ExecutionFeed } from '@/components/monitoring/ExecutionFeed'
+import { OpportunitiesSection } from '@/components/monitoring/OpportunitiesSection'
+import { formatRelative } from '@/components/monitoring/format'
 import { filterCounts, filterWorkflows, type FilterKey } from '@/components/monitoring/filters'
-import { useN8nMonitoring } from '@/lib/n8n'
-import { cn } from '@/lib/utils'
-import type { N8nWorkflowSummary } from '@/lib/n8n-types'
+import { runReview, useN8nMonitoring } from '@/lib/n8n'
+import { cn, logger } from '@/lib/utils'
+import type { N8nImprovement, N8nWorkflowSummary } from '@/lib/n8n-types'
 
 const CLIENT_ORDER = ['John Dalia', 'SRBL Capital', '26 Academy', 'JK Consulting']
+
+type ImprovementsMap = Map<string, N8nImprovement[]>
 
 function groupByClient(workflows: N8nWorkflowSummary[]): [string, N8nWorkflowSummary[]][] {
   const byClient = new Map<string, N8nWorkflowSummary[]>()
@@ -39,10 +43,12 @@ function ClientSection({
   client,
   workflows,
   currency,
+  improvementsById,
 }: {
   client: string
   workflows: N8nWorkflowSummary[]
   currency: string
+  improvementsById: ImprovementsMap
 }) {
   const failures = workflows.filter((w) => w.status === 'error').length
   return (
@@ -68,7 +74,12 @@ function ClientSection({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {workflows.map((w) => (
-          <WorkflowCard key={w.id} workflow={w} currency={currency} />
+          <WorkflowCard
+            key={w.id}
+            workflow={w}
+            currency={currency}
+            improvements={improvementsById.get(w.id)}
+          />
         ))}
       </div>
     </section>
@@ -76,19 +87,23 @@ function ClientSection({
 }
 
 export function MonitoringN8n() {
-  const { data, isLoading, error } = useN8nMonitoring()
+  const { data, isLoading, error, refetch } = useN8nMonitoring()
   const [filter, setFilter] = useState<FilterKey>('all')
   const [sortByCost, setSortByCost] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
 
   const grouped = useMemo(() => (data ? groupByClient(data.workflows) : []), [data])
   const failing = useMemo(
     () => (data ? data.workflows.filter((w) => w.status === 'error') : []),
     [data],
   )
-  const counts = useMemo(
-    () => (data ? filterCounts(data.workflows) : null),
-    [data],
-  )
+  const counts = useMemo(() => (data ? filterCounts(data.workflows) : null), [data])
+  const improvementsById = useMemo<ImprovementsMap>(() => {
+    const m: ImprovementsMap = new Map()
+    for (const r of data?.reviewCache?.reviews ?? []) m.set(r.workflowId, r.improvements)
+    return m
+  }, [data])
   const flatList = useMemo(() => {
     if (!data) return []
     const list = filterWorkflows(data.workflows, filter)
@@ -98,21 +113,71 @@ export function MonitoringN8n() {
   const activeCount = data?.kpis.activeCount ?? 0
   const currency = data?.currency ?? 'USD'
   const useFlat = filter !== 'all' || sortByCost
+  const reviewCache = data?.reviewCache ?? null
+
+  async function handleAnalyze() {
+    if (reviewLoading) return
+    setReviewError(null)
+    setReviewLoading(true)
+    try {
+      await runReview()
+      refetch() // récupère le reviewCache mis à jour
+    } catch (err) {
+      logger.error('review failed', err)
+      setReviewError(err instanceof Error ? err.message : 'Analyse échouée')
+    } finally {
+      setReviewLoading(false)
+    }
+  }
 
   return (
     <AppShell>
       <div className="col-scroll px-6 py-6 max-w-[1400px] mx-auto w-full">
-        {/* Barre de titre */}
-        <div className="flex items-center gap-2.5 mb-5">
-          <span className="text-sage">
-            <Activity className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold text-cream-50 leading-tight">Monitoring n8n</h2>
-            <span className="eyebrow">
-              Workflows · {activeCount} actif{activeCount > 1 ? 's' : ''}
+        {/* Barre de titre + bouton Analyser */}
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-2.5">
+            <span className="text-sage">
+              <Activity className="h-5 w-5" />
             </span>
+            <div>
+              <h2 className="text-lg font-semibold text-cream-50 leading-tight">Monitoring n8n</h2>
+              <span className="eyebrow">
+                Workflows · {activeCount} actif{activeCount > 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
+          {!isLoading && !error && data && (
+            <div className="flex flex-col items-end gap-1">
+              <button
+                type="button"
+                onClick={() => void handleAnalyze()}
+                disabled={reviewLoading}
+                className={cn(
+                  'inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors',
+                  reviewLoading
+                    ? 'bg-glass-7 border-glass-10 text-muted-deeper cursor-not-allowed'
+                    : 'bg-sage/15 hover:bg-sage/25 border-sage/30 text-cream-50',
+                )}
+              >
+                {reviewLoading ? (
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-cream-50/40 border-t-cream-50 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {reviewLoading ? 'Analyse en cours…' : 'Analyser mon parc'}
+              </button>
+              {reviewCache?.generatedAt && !reviewError && (
+                <span className="text-eyebrow text-muted-deeper">
+                  Dernière analyse {formatRelative(reviewCache.generatedAt)}
+                </span>
+              )}
+              {reviewError && (
+                <span className="text-eyebrow text-terracotta-light max-w-[240px] truncate" title={reviewError}>
+                  {reviewError}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Chargement */}
@@ -196,7 +261,12 @@ export function MonitoringN8n() {
                 flatList.length > 0 ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {flatList.map((w) => (
-                      <WorkflowCard key={w.id} workflow={w} currency={currency} />
+                      <WorkflowCard
+                        key={w.id}
+                        workflow={w}
+                        currency={currency}
+                        improvements={improvementsById.get(w.id)}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -205,10 +275,19 @@ export function MonitoringN8n() {
               ) : (
                 <div className="space-y-6">
                   {grouped.map(([client, workflows]) => (
-                    <ClientSection key={client} client={client} workflows={workflows} currency={currency} />
+                    <ClientSection
+                      key={client}
+                      client={client}
+                      workflows={workflows}
+                      currency={currency}
+                      improvementsById={improvementsById}
+                    />
                   ))}
                 </div>
               )}
+
+              {/* Opportunités par client (lot F, lu depuis le cache IA) */}
+              {reviewCache && <OpportunitiesSection opportunities={reviewCache.opportunities} />}
             </div>
 
             {/* Flux d'exécutions (sticky) */}

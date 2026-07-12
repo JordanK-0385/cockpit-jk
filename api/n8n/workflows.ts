@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { requireAuthorizedUser, setNoStore } from '../_lib/auth.js'
 import { buildMonitoring, N8nConfigError, N8nUpstreamError } from '../_lib/n8n.js'
+import { readReviewCache } from '../_lib/ai-cache.js'
 
 /**
  * Proxy Monitoring n8n — Sprint 5, READ-ONLY strict.
@@ -27,8 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const data = await buildMonitoring(Date.now())
-    res.status(200).json(data)
+    const [data, reviewCache] = await Promise.all([
+      buildMonitoring(Date.now()),
+      readReviewCache(auth.uid),
+    ])
+    res.status(200).json({ ...data, reviewCache })
   } catch (err) {
     if (err instanceof N8nConfigError) {
       res.status(502).json({ error: 'N8N_NOT_CONFIGURED', detail: err.message })

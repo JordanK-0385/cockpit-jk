@@ -321,6 +321,28 @@ function outputItemCount(detail: RawExecutionDetail, outputNode: string | undefi
   return Array.isArray(branch) ? branch.length : 0
 }
 
+// ── Structures compactes (pour l'analyse IA, lots E & F) ────────────────────
+export interface N8nWorkflowStructure {
+  id: string
+  name: string
+  client: string
+  triggerType: N8nTriggerType
+  active: boolean
+  nodeTypes: string[]
+}
+
+export async function fetchWorkflowStructures(): Promise<N8nWorkflowStructure[]> {
+  const workflows = await fetchAllWorkflows()
+  return workflows.map((wf) => ({
+    id: String(wf.id),
+    name: wf.name,
+    client: deriveClient(wf),
+    triggerType: deriveTrigger(wf.nodes),
+    active: wf.active,
+    nodeTypes: (wf.nodes ?? []).map((n) => n.type ?? 'unknown'),
+  }))
+}
+
 // ── Agrégation ──────────────────────────────────────────────────────────────
 export async function buildMonitoring(nowMs: number): Promise<N8nMonitoringResponse> {
   const [workflows, { executions, truncated }] = await Promise.all([

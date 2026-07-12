@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { authedFetch } from './airtable'
-import type { N8nMonitoringResponse } from './n8n-types'
+import type { N8nMonitoringResponse, N8nReviewCache } from './n8n-types'
 
 export type {
   N8nMonitoringResponse,
@@ -8,6 +8,10 @@ export type {
   N8nExecutionEvent,
   N8nWorkflowStatus,
   N8nTriggerType,
+  N8nReviewCache,
+  N8nWorkflowReview,
+  N8nClientOpportunities,
+  N8nImprovement,
 } from './n8n-types'
 
 const REFETCH_MS = 30_000 // effet « live » : re-fetch toutes les 30 s
@@ -50,6 +54,27 @@ async function fetchMonitoring(): Promise<N8nMonitoringResponse> {
     throw new Error(detail || `n8n monitoring failed (${r.status})`)
   }
   return (await r.json()) as N8nMonitoringResponse
+}
+
+/**
+ * Déclenche l'analyse IA du parc (lots E & F). Batch + coûteux → appelé
+ * uniquement à la demande (bouton), jamais au montage. Écrit le cache
+ * Firestore côté serveur ; l'appelant refetch ensuite le Monitoring pour
+ * récupérer le `reviewCache` mis à jour.
+ */
+export async function runReview(): Promise<N8nReviewCache> {
+  const r = await authedFetch('/api/n8n/review', { method: 'POST' })
+  if (!r.ok) {
+    let detail = ''
+    try {
+      const body = (await r.json()) as { error?: string; detail?: string }
+      detail = body.detail ?? body.error ?? ''
+    } catch {
+      detail = await r.text().catch(() => '')
+    }
+    throw new Error(detail || `Analyse IA échouée (${r.status})`)
+  }
+  return (await r.json()) as N8nReviewCache
 }
 
 /**

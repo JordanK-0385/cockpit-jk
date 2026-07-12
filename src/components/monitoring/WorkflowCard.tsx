@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import {
   AlertTriangle,
+  ChevronDown,
   Clock,
   ExternalLink,
   EyeOff,
   KeyRound,
+  Lightbulb,
   Pause,
   RefreshCw,
   ScrollText,
@@ -14,7 +17,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { cn } from '@/lib/utils'
 import { clientTone, workflowEditorUrl } from '@/lib/n8n'
-import type { N8nWorkflowSummary } from '@/lib/n8n-types'
+import type { N8nImprovement, N8nWorkflowSummary } from '@/lib/n8n-types'
 import { formatCost, formatDuration, formatPct, formatRelative, formatTokens } from './format'
 
 const borderByTone: Record<'sage' | 'glacier' | 'terracotta' | 'neutral', string> = {
@@ -98,7 +101,15 @@ function CostLine({ w, currency }: { w: N8nWorkflowSummary; currency: string }) 
   )
 }
 
-export function WorkflowCard({ workflow, currency }: { workflow: N8nWorkflowSummary; currency: string }) {
+export function WorkflowCard({
+  workflow,
+  currency,
+  improvements = [],
+}: {
+  workflow: N8nWorkflowSummary
+  currency: string
+  improvements?: N8nImprovement[]
+}) {
   const tone = clientTone(workflow.client)
   const badge = stateBadge(workflow)
   const editorUrl = workflowEditorUrl(workflow.id)
@@ -106,6 +117,7 @@ export function WorkflowCard({ workflow, currency }: { workflow: N8nWorkflowSumm
     workflow.expiringCredentials.length > 0
       ? Math.min(...workflow.expiringCredentials.map((c) => c.daysLeft))
       : null
+  const [showImprovements, setShowImprovements] = useState(false)
 
   return (
     <GlassCard
@@ -126,7 +138,20 @@ export function WorkflowCard({ workflow, currency }: { workflow: N8nWorkflowSumm
             <badge.icon className={cn('h-3 w-3', badge.live && 'animate-pulse')} />
             {badge.label}
           </GlassBadge>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap justify-end">
+            {improvements.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowImprovements((v) => !v)}
+                title="Suggestion d'amélioration (IA)"
+              >
+                <GlassBadge tone="glacier" className="gap-1 cursor-pointer">
+                  <Lightbulb className="h-3 w-3" />
+                  Amélioration possible
+                  <ChevronDown className={cn('h-3 w-3 transition-transform', showImprovements && 'rotate-180')} />
+                </GlassBadge>
+              </button>
+            )}
             {credDaysLeft !== null && (
               <GlassBadge
                 tone="terracotta"
@@ -160,6 +185,20 @@ export function WorkflowCard({ workflow, currency }: { workflow: N8nWorkflowSumm
       <div className="border-t border-glass-10 pt-2.5">
         <CostLine w={workflow} currency={currency} />
       </div>
+
+      {/* Panneau améliorations IA (lot E) */}
+      {showImprovements && improvements.length > 0 && (
+        <div className="rounded-lg bg-glacier/10 border border-glacier/25 px-3 py-2.5 space-y-2">
+          {improvements.map((imp, i) => (
+            <div key={i}>
+              <p className="text-xs font-medium text-glacier-light leading-snug">{imp.title}</p>
+              {imp.detail && (
+                <p className="text-eyebrow text-muted leading-snug mt-0.5">{imp.detail}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Message d'erreur inline */}
       {workflow.status === 'error' && workflow.lastError && (

@@ -11,6 +11,12 @@ export const COST_WINDOW_DAYS = 30 // fenêtre de calcul tokens/coût
 export const DATA_FETCH_CAP = 150 // nb max de runs dont on récupère includeData=true
 export const DATA_FETCH_CONCURRENCY = 6 // parallélisme des fetchs de détail
 
+// ── Lots E & F : analyses IA (batch + cache), garde-fous anti-Denial-of-Wallet
+export const AI_MAX_WORKFLOWS = 60 // nb max de workflows envoyés à l'analyse
+export const AI_MAX_CLIENTS = 12 // nb max de clients pour les opportunités
+export const AI_MAX_TOKENS = 4096 // plafond de sortie par appel IA
+export const AI_MAX_CALLS = 2 // E + F : jamais plus de 2 appels par run
+
 // ── Prix des modèles ───────────────────────────────────────────────────────
 // $ / 1M tokens (input, output). Tarifs PUBLICS Anthropic (USD).
 // Source de vérité unique : à ajuster ici si les tarifs changent.

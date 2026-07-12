@@ -51,7 +51,7 @@ loadLocalEnvFallback()
 
 let adminApp: App | null = null
 
-function getAdmin(): App {
+export function getAdmin(): App {
   if (adminApp) return adminApp
   if (getApps().length > 0) {
     adminApp = getApps()[0]
