@@ -1,18 +1,25 @@
-import { useMemo } from 'react'
-import { Activity, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Activity, AlertCircle, ArrowDownWideNarrow, CheckCircle2, Sparkles } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { Skeleton } from '@/components/ui/Loader'
 import { KpiRow } from '@/components/monitoring/KpiRow'
 import { AlertBanner } from '@/components/monitoring/AlertBanner'
+import { CredentialsBanner } from '@/components/monitoring/CredentialsBanner'
+import { FilterChips } from '@/components/monitoring/FilterChips'
 import { WorkflowCard } from '@/components/monitoring/WorkflowCard'
 import { ExecutionFeed } from '@/components/monitoring/ExecutionFeed'
-import { useN8nMonitoring } from '@/lib/n8n'
-import type { N8nWorkflowSummary } from '@/lib/n8n-types'
+import { OpportunitiesSection } from '@/components/monitoring/OpportunitiesSection'
+import { formatRelative } from '@/components/monitoring/format'
+import { filterCounts, filterWorkflows, type FilterKey } from '@/components/monitoring/filters'
+import { runReview, useN8nMonitoring } from '@/lib/n8n'
+import { cn, logger } from '@/lib/utils'
+import type { N8nImprovement, N8nWorkflowSummary } from '@/lib/n8n-types'
 
-// Ordre d'affichage des sections client (les clients connus d'abord).
-const CLIENT_ORDER = ['John Dalia', 'SRBL Capital', '26 Academy', 'JK interne']
+const CLIENT_ORDER = ['John Dalia', 'SRBL Capital', '26 Academy', 'JK Consulting']
+
+type ImprovementsMap = Map<string, N8nImprovement[]>
 
 function groupByClient(workflows: N8nWorkflowSummary[]): [string, N8nWorkflowSummary[]][] {
   const byClient = new Map<string, N8nWorkflowSummary[]>()
@@ -32,7 +39,17 @@ function groupByClient(workflows: N8nWorkflowSummary[]): [string, N8nWorkflowSum
   return clients.map((c) => [c, byClient.get(c)!])
 }
 
-function ClientSection({ client, workflows }: { client: string; workflows: N8nWorkflowSummary[] }) {
+function ClientSection({
+  client,
+  workflows,
+  currency,
+  improvementsById,
+}: {
+  client: string
+  workflows: N8nWorkflowSummary[]
+  currency: string
+  improvementsById: ImprovementsMap
+}) {
   const failures = workflows.filter((w) => w.status === 'error').length
   return (
     <section>
@@ -57,7 +74,12 @@ function ClientSection({ client, workflows }: { client: string; workflows: N8nWo
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {workflows.map((w) => (
-          <WorkflowCard key={w.id} workflow={w} />
+          <WorkflowCard
+            key={w.id}
+            workflow={w}
+            currency={currency}
+            improvements={improvementsById.get(w.id)}
+          />
         ))}
       </div>
     </section>
@@ -65,36 +87,104 @@ function ClientSection({ client, workflows }: { client: string; workflows: N8nWo
 }
 
 export function MonitoringN8n() {
-  const { data, isLoading, error } = useN8nMonitoring()
+  const { data, isLoading, error, refetch } = useN8nMonitoring()
+  const [filter, setFilter] = useState<FilterKey>('all')
+  const [sortByCost, setSortByCost] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
 
   const grouped = useMemo(() => (data ? groupByClient(data.workflows) : []), [data])
   const failing = useMemo(
     () => (data ? data.workflows.filter((w) => w.status === 'error') : []),
     [data],
   )
+  const counts = useMemo(() => (data ? filterCounts(data.workflows) : null), [data])
+  const improvementsById = useMemo<ImprovementsMap>(() => {
+    const m: ImprovementsMap = new Map()
+    for (const r of data?.reviewCache?.reviews ?? []) m.set(r.workflowId, r.improvements)
+    return m
+  }, [data])
+  const flatList = useMemo(() => {
+    if (!data) return []
+    const list = filterWorkflows(data.workflows, filter)
+    return sortByCost ? [...list].sort((a, b) => (b.cost30d ?? -1) - (a.cost30d ?? -1)) : list
+  }, [data, filter, sortByCost])
+
   const activeCount = data?.kpis.activeCount ?? 0
+  const currency = data?.currency ?? 'USD'
+  const useFlat = filter !== 'all' || sortByCost
+  const reviewCache = data?.reviewCache ?? null
+
+  async function handleAnalyze() {
+    if (reviewLoading) return
+    setReviewError(null)
+    setReviewLoading(true)
+    try {
+      await runReview()
+      refetch() // récupère le reviewCache mis à jour
+    } catch (err) {
+      logger.error('review failed', err)
+      setReviewError(err instanceof Error ? err.message : 'Analyse échouée')
+    } finally {
+      setReviewLoading(false)
+    }
+  }
 
   return (
     <AppShell>
       <div className="col-scroll px-6 py-6 max-w-[1400px] mx-auto w-full">
-        {/* Barre de titre */}
-        <div className="flex items-center gap-2.5 mb-5">
-          <span className="text-sage">
-            <Activity className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold text-cream-50 leading-tight">Monitoring n8n</h2>
-            <span className="eyebrow">
-              Workflows · {activeCount} actif{activeCount > 1 ? 's' : ''}
+        {/* Barre de titre + bouton Analyser */}
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-2.5">
+            <span className="text-sage">
+              <Activity className="h-5 w-5" />
             </span>
+            <div>
+              <h2 className="text-lg font-semibold text-cream-50 leading-tight">Monitoring n8n</h2>
+              <span className="eyebrow">
+                Workflows · {activeCount} actif{activeCount > 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
+          {!isLoading && !error && data && (
+            <div className="flex flex-col items-end gap-1">
+              <button
+                type="button"
+                onClick={() => void handleAnalyze()}
+                disabled={reviewLoading}
+                className={cn(
+                  'inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors',
+                  reviewLoading
+                    ? 'bg-glass-7 border-glass-10 text-muted-deeper cursor-not-allowed'
+                    : 'bg-sage/15 hover:bg-sage/25 border-sage/30 text-cream-50',
+                )}
+              >
+                {reviewLoading ? (
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-cream-50/40 border-t-cream-50 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {reviewLoading ? 'Analyse en cours…' : 'Analyser mon parc'}
+              </button>
+              {reviewCache?.generatedAt && !reviewError && (
+                <span className="text-eyebrow text-muted-deeper">
+                  Dernière analyse {formatRelative(reviewCache.generatedAt)}
+                </span>
+              )}
+              {reviewError && (
+                <span className="text-eyebrow text-terracotta-light max-w-[240px] truncate" title={reviewError}>
+                  {reviewError}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Chargement */}
         {isLoading && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {Array.from({ length: 5 }).map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-20" />
               ))}
             </div>
@@ -107,7 +197,7 @@ export function MonitoringN8n() {
           </div>
         )}
 
-        {/* Erreur (n8n injoignable / non configuré) — l'onglet ne plante pas */}
+        {/* Erreur */}
         {!isLoading && error && (
           <GlassCard depth="l3" tone="terracotta" className="p-5" hoverable={false}>
             <div className="flex items-start gap-2 text-sm text-terracotta-light">
@@ -135,18 +225,69 @@ export function MonitoringN8n() {
           <div className="lg:grid lg:grid-cols-[1fr_340px] lg:gap-6">
             {/* Colonne principale */}
             <div className="space-y-6 min-w-0">
-              <KpiRow kpis={data.kpis} />
+              <KpiRow kpis={data.kpis} currency={currency} />
+              <CredentialsBanner credentials={data.credentialsExpiring} />
               <AlertBanner failing={failing} />
-              {data.truncated && (
+              {(data.truncated || data.costTruncated) && (
                 <p className="text-eyebrow text-muted-deeper px-1">
-                  Données partielles : la pagination des exécutions a été bornée.
+                  Données partielles : {data.truncated && 'pagination des exécutions bornée'}
+                  {data.truncated && data.costTruncated && ' · '}
+                  {data.costTruncated && 'coût calculé sur les runs récents seulement'}.
                 </p>
               )}
-              <div className="space-y-6">
-                {grouped.map(([client, workflows]) => (
-                  <ClientSection key={client} client={client} workflows={workflows} />
-                ))}
-              </div>
+
+              {/* Barre filtres + tri */}
+              {counts && (
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <FilterChips active={filter} counts={counts} onChange={setFilter} />
+                  <button
+                    type="button"
+                    onClick={() => setSortByCost((v) => !v)}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors shrink-0',
+                      sortByCost
+                        ? 'bg-glacier/15 border-glacier/30 text-glacier-light'
+                        : 'bg-glass-7 border-glass-10 text-muted hover:text-cream-50',
+                    )}
+                  >
+                    <ArrowDownWideNarrow className="h-3.5 w-3.5" />
+                    Trier par coût
+                  </button>
+                </div>
+              )}
+
+              {/* Grille : plate (filtre/tri actif) ou groupée par client */}
+              {useFlat ? (
+                flatList.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {flatList.map((w) => (
+                      <WorkflowCard
+                        key={w.id}
+                        workflow={w}
+                        currency={currency}
+                        improvements={improvementsById.get(w.id)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-deeper px-1">Aucun workflow pour ce filtre.</p>
+                )
+              ) : (
+                <div className="space-y-6">
+                  {grouped.map(([client, workflows]) => (
+                    <ClientSection
+                      key={client}
+                      client={client}
+                      workflows={workflows}
+                      currency={currency}
+                      improvementsById={improvementsById}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Opportunités par client (lot F, lu depuis le cache IA) */}
+              {reviewCache && <OpportunitiesSection opportunities={reviewCache.opportunities} />}
             </div>
 
             {/* Flux d'exécutions (sticky) */}
