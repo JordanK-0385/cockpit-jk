@@ -14,6 +14,22 @@ export function formatPct(rate: number): string {
   return `${Math.round(rate * 100)} %`
 }
 
+const CURRENCY_SYMBOL: Record<string, string> = { USD: '$', EUR: '€' }
+
+/** Montant de coût avec symbole de devise (ex. « $12.40 »). */
+export function formatCost(value: number, currency: string): string {
+  const sym = CURRENCY_SYMBOL[currency] ?? ''
+  const n = value >= 100 ? Math.round(value).toString() : value.toFixed(2)
+  return sym ? `${sym}${n}` : `${n} ${currency}`
+}
+
+/** Compte de tokens compact (ex. « 1.2M », « 340k », « 512 »). */
+export function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}k`
+  return String(n)
+}
+
 /** « il y a 3 min », « il y a 2 h », etc. */
 export function formatRelative(iso: string | null, nowMs: number = Date.now()): string {
   if (!iso) return '—'

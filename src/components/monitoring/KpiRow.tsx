@@ -1,7 +1,7 @@
-import { Activity, CheckCircle2, ListChecks, AlertTriangle, Timer } from 'lucide-react'
+import { Activity, CheckCircle2, ListChecks, AlertTriangle, Timer, Coins } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { cn } from '@/lib/utils'
-import { formatDuration, formatPct } from './format'
+import { formatCost, formatDuration, formatPct } from './format'
 import type { N8nMonitoringKpis } from '@/lib/n8n-types'
 
 type Tile = {
@@ -12,7 +12,7 @@ type Tile = {
   accent?: boolean
 }
 
-export function KpiRow({ kpis }: { kpis: N8nMonitoringKpis }) {
+export function KpiRow({ kpis, currency }: { kpis: N8nMonitoringKpis; currency: string }) {
   const tiles: Tile[] = [
     {
       label: 'Workflows actifs',
@@ -45,10 +45,16 @@ export function KpiRow({ kpis }: { kpis: N8nMonitoringKpis }) {
       icon: Timer,
       tone: 'neutral',
     },
+    {
+      label: 'Coût total 30 j',
+      value: formatCost(kpis.cost30dTotal, currency),
+      icon: Coins,
+      tone: 'glacier',
+    },
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       {tiles.map((t) => (
         <GlassCard
           key={t.label}
