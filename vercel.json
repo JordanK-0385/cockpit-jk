@@ -7,6 +7,12 @@
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+      ]
     }
   ]
 }

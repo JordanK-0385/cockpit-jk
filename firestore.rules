@@ -32,6 +32,17 @@ service cloud.firestore {
       allow read, write: if isAuthorizedUser(uid);
     }
 
+    // Préférences UI : users/{uid}/preferences/{prefId} (doc 'ui', cf.
+    // PreferencesProvider). Sans cette règle, le deny par défaut ci-dessous
+    // renvoyait « Missing or insufficient permissions » au chargement.
+    match /users/{uid}/preferences/{prefId} {
+      allow read, write: if isAuthorizedUser(uid);
+    }
+
+    // NB : le cache IA Monitoring (collection monitoringAi/{uid}) est écrit ET
+    // lu côté serveur via firebase-admin, qui bypass ces règles — aucune règle
+    // client n'est requise pour lui.
+
     // Tout le reste : refusé par défaut.
     match /{document=**} {
       allow read, write: if false;
