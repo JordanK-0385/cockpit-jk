@@ -1,18 +1,19 @@
 import { type ReactNode } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Sparkles, Cloud, LogOut, LayoutGrid, Radar, GraduationCap, Activity } from 'lucide-react'
+import { Sparkles, Cloud, LogOut, Home, FolderKanban, GraduationCap, Activity } from 'lucide-react'
 import { GlassPill } from '@/components/ui/GlassPill'
 import { LiveClock } from '@/components/LiveClock'
 import { PerformanceToggle } from '@/components/PerformanceToggle'
 import { logout } from '@/lib/firebase'
 import { useAuth } from '@/lib/auth'
+import { useAssistant } from '@/components/assistant/AssistantProvider'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 const MODULES = [
-  { id: 'cockpit', label: 'Cockpit', icon: LayoutGrid, path: '/' },
-  { id: 'radar', label: 'Radar Projets', icon: Radar, path: '/radar' },
+  { id: 'accueil', label: 'Accueil', icon: Home, path: '/' },
+  { id: 'projets', label: 'Projets', icon: FolderKanban, path: '/projets' },
   { id: 'apprendre', label: 'Apprendre', icon: GraduationCap, path: '/apprendre' },
   { id: 'monitoring', label: 'Monitoring n8n', icon: Activity, path: '/monitoring' },
 ] as const
@@ -23,6 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // acceptable trade for not re-rendering the entire app every second.
   const dateLabel = format(new Date(), "EEEE d MMMM", { locale: fr })
   const { user } = useAuth()
+  const { open: openAssistant } = useAssistant()
 
   return (
     <div className="min-h-screen w-screen">
@@ -74,6 +76,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           <GlassPill tone="sage">
             <LiveClock />
           </GlassPill>
+
+          <button
+            onClick={() => openAssistant()}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sage/15 hover:bg-sage/25 border border-sage/30 text-sage-light text-xs transition-colors"
+            title="Assistant (⌘K)"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Assistant</span>
+            <kbd className="hidden md:inline text-[10px] text-muted-deeper font-sans">⌘K</kbd>
+          </button>
 
           <PerformanceToggle />
 

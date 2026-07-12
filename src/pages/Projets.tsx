@@ -11,7 +11,7 @@ import { useRadar } from '@/lib/radar'
 import { fetchFocusDuJour } from '@/lib/focus'
 import { logger } from '@/lib/utils'
 
-export function RadarProjets() {
+export function Projets() {
   const { projects, isLoading, error } = useRadar()
 
   const [focusText, setFocusText] = useState<string | null>(null)

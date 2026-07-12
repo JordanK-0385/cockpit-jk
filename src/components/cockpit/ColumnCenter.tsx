@@ -36,7 +36,7 @@ function uid() {
   return `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
-export function ColumnCenter() {
+export function ColumnCenter({ contextPrefill }: { contextPrefill?: string } = {}) {
   const { user } = useAuth()
   const userId = user?.uid ?? null
   // Start empty (NOT with the greeting) so the synthetic greeting can't flash
@@ -44,7 +44,9 @@ export function ColumnCenter() {
   // injected once loadHistory confirms there is no stored conversation.
   const [messages, setMessages] = useState<Msg[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
-  const [input, setInput] = useState('')
+  // Préremplissage optionnel (ouverture depuis une carte client). ColumnCenter
+  // est remonté à chaque ouverture du drawer, donc l'état initial suffit.
+  const [input, setInput] = useState(contextPrefill ?? '')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const scrollerRef = useRef<HTMLElement | null>(null)

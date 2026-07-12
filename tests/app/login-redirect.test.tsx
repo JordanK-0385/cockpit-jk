@@ -12,8 +12,12 @@ vi.mock('@/pages/Login', () => ({
   Login: () => <div data-testid="login-page">LOGIN</div>,
 }))
 
-vi.mock('@/pages/Cockpit', () => ({
-  Cockpit: () => <div data-testid="cockpit-page">COCKPIT</div>,
+vi.mock('@/pages/Accueil', () => ({
+  Accueil: () => <div data-testid="accueil-page">ACCUEIL</div>,
+}))
+
+vi.mock('@/pages/Projets', () => ({
+  Projets: () => <div data-testid="projets-page">PROJETS</div>,
 }))
 
 vi.mock('@/components/ambient/AmbientLayer', () => ({
@@ -44,14 +48,14 @@ describe('App routing — login gate', () => {
   it('redirects an unauthenticated user from / to the login page', () => {
     renderAt('/')
     expect(screen.getByTestId('login-page')).toBeInTheDocument()
-    expect(screen.queryByTestId('cockpit-page')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('accueil-page')).not.toBeInTheDocument()
   })
 
-  it('renders the cockpit at / when the user is authorized', () => {
+  it('renders the home (Accueil) at / when the user is authorized', () => {
     authState.authorized = true
     authState.user = { email: 'jordan.koskas@gmail.com' }
     renderAt('/')
-    expect(screen.getByTestId('cockpit-page')).toBeInTheDocument()
+    expect(screen.getByTestId('accueil-page')).toBeInTheDocument()
     expect(screen.queryByTestId('login-page')).not.toBeInTheDocument()
   })
 
@@ -59,8 +63,15 @@ describe('App routing — login gate', () => {
     authState.authorized = true
     authState.user = { email: 'jordan.koskas@gmail.com' }
     renderAt('/login')
-    expect(screen.getByTestId('cockpit-page')).toBeInTheDocument()
+    expect(screen.getByTestId('accueil-page')).toBeInTheDocument()
     expect(screen.queryByTestId('login-page')).not.toBeInTheDocument()
+  })
+
+  it('redirects the legacy /radar route to /projets when authorized', () => {
+    authState.authorized = true
+    authState.user = { email: 'jordan.koskas@gmail.com' }
+    renderAt('/radar')
+    expect(screen.getByTestId('projets-page')).toBeInTheDocument()
   })
 
   it('shows a loader while auth state is still loading', () => {
@@ -68,6 +79,6 @@ describe('App routing — login gate', () => {
     renderAt('/')
     expect(screen.getByTestId('loader')).toBeInTheDocument()
     expect(screen.queryByTestId('login-page')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('cockpit-page')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('accueil-page')).not.toBeInTheDocument()
   })
 })
