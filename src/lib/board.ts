@@ -24,10 +24,8 @@ const CLIENT_CONFIG: Record<string, { tone: BoardTone; kind: BoardClientKind }> 
   'John Dalia': { tone: 'terracotta', kind: 'retainer' },
   '26 Academy': { tone: 'sage', kind: 'retainer' },
   'SRBL Capital': { tone: 'glacier', kind: 'client' },
-  Habad: { tone: 'glacier', kind: 'client' },
-  Cockpit: { tone: 'neutral', kind: 'interne' },
-  Interne: { tone: 'neutral', kind: 'interne' },
-  'JK interne': { tone: 'neutral', kind: 'interne' },
+  'Habad.ai': { tone: 'glacier', kind: 'client' },
+  'JK Consulting': { tone: 'neutral', kind: 'interne' },
 }
 const FALLBACK = { tone: 'neutral' as BoardTone, kind: 'client' as BoardClientKind }
 
@@ -99,7 +97,7 @@ export function useBoard() {
   // projectId → client (pour rattacher tâches et sessions).
   const projectClient = new Map<string, string>()
   for (const p of projects) {
-    projectClient.set(p.id, (p.fields.Client ?? 'Interne').trim() || 'Interne')
+    projectClient.set(p.id, (p.fields.Client ?? 'JK Consulting').trim() || 'JK Consulting')
   }
 
   type Agg = {
@@ -122,7 +120,7 @@ export function useBoard() {
 
   // Projets → une entrée client par projet.
   for (const p of projects) {
-    const client = (p.fields.Client ?? 'Interne').trim() || 'Interne'
+    const client = (p.fields.Client ?? 'JK Consulting').trim() || 'JK Consulting'
     const a = ensure(client)
     a.projectNames.push(p.fields['Nom du projet'] ?? '—')
     if (p.fields.Statut) a.statuts.push(p.fields.Statut)
