@@ -18,21 +18,23 @@ export const AI_MAX_TOKENS = 4096 // plafond de sortie par appel IA
 export const AI_MAX_CALLS = 2 // E + F : jamais plus de 2 appels par run
 
 // ── Prix des modèles ───────────────────────────────────────────────────────
-// $ / 1M tokens (input, output). Tarifs PUBLICS Anthropic (USD).
-// Source de vérité unique : à ajuster ici si les tarifs changent.
+// $ / 1M tokens (input, output). Tarifs PUBLICS (USD) — source de vérité unique.
+// Anthropic + OpenAI (les workflows n8n mélangent les deux). À ajuster ici.
 export type ModelPrice = { in: number; out: number }
 export const MODEL_PRICES: Record<string, ModelPrice> = {
   opus: { in: 15, out: 75 },
   sonnet: { in: 3, out: 15 },
   'haiku-3-5': { in: 0.8, out: 4 },
   haiku: { in: 1, out: 5 },
+  'gpt-4.1-mini': { in: 0.4, out: 1.6 },
 }
-export const CURRENCY = 'USD'
-// Si renseigné (ex. 0.92), convertit les montants $ → € à l'affichage serveur.
-// Laissé à null tant que Jordan n'a pas fixé un taux : on n'invente pas de conversion.
-export const EUR_USD_RATE: number | null = null
 
-/** Résout un id de modèle Anthropic brut vers un tarif de la table. */
+// Taux de conversion $ → € (multiplie les montants USD). Constante FIXE à
+// ajuster à la main — ce n'est pas un taux live. Mettre null pour afficher en $.
+export const EUR_USD_RATE: number | null = 0.92
+export const CURRENCY = EUR_USD_RATE ? 'EUR' : 'USD'
+
+/** Résout un id de modèle brut (Anthropic ou OpenAI) vers un tarif de la table. */
 export function priceForModel(model: string | null | undefined): ModelPrice | null {
   if (!model) return null
   const m = model.toLowerCase()
@@ -41,6 +43,7 @@ export function priceForModel(model: string | null | undefined): ModelPrice | nu
     return m.includes('3-5') || m.includes('3.5') ? MODEL_PRICES['haiku-3-5'] : MODEL_PRICES.haiku
   }
   if (m.includes('sonnet')) return MODEL_PRICES.sonnet
+  if (m.includes('gpt-4.1-mini') || m.includes('gpt-4-1-mini')) return MODEL_PRICES['gpt-4.1-mini']
   return null
 }
 

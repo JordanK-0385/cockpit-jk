@@ -79,6 +79,11 @@ describe('priceForModel', () => {
     expect(priceForModel('claude-3-5-haiku-20241022')).toEqual({ in: 0.8, out: 4 })
   })
 
+  it('résout GPT-4.1-mini (OpenAI)', () => {
+    expect(priceForModel('gpt-4.1-mini')).toEqual({ in: 0.4, out: 1.6 })
+    expect(priceForModel('gpt-4.1-mini-2025-04-14')).toEqual({ in: 0.4, out: 1.6 })
+  })
+
   it('renvoie null pour un modèle inconnu ou vide', () => {
     expect(priceForModel('gpt-4o')).toBeNull()
     expect(priceForModel(null)).toBeNull()
